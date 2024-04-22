@@ -61,6 +61,37 @@ rtt min/avg/max/mdev = 196.444/196.444/196.444/0.000 ms
 Using Wireshark, I captured the packet and saw that the TOKEN = c9VocB/J (see `Lab1-1cToken.pcapng`)
 
 # Exercise 2
+
+### <ins>Over Wifi</ins>:
+__Type 0/code 0__ (valid echo reply): 
+```bash
+kirstenm@DESKTOP-KirstenM:~$ ping 8.8.8.8 -c 1
+```
+__Type 11/code 0__ (time-to-live exceeded in transit) and __Type 3/code 3__ (destination unreachable, port unreachable):
+```bash
+kirstenm@DESKTOP-KirstenM:~$ traceroute dartmouth.edu
+```
+### <ins>Over vEthernet(WSL)</ins>:
+__Type 14/code 0__ (valid timestamp reply):
+```bash
+sudo hping3 172.29.0.1 --icmp --icmp-ts -V -c 1
+```    
+
+
+
+
+I think this is deprecated, it won't send back a address mask reply
+```bash 
+sudo hping3 -C 17 -c 2 172.29.0.1    
+```                
+
+
+
+secunda ---> nc -l 8080
+primary ---> sudo hping3 192.168.59.11 --icmp --icmp-ts -V -c 2 -p 8080 
+
+
+
 # Exercise 3
 ## Step One
 ```bash

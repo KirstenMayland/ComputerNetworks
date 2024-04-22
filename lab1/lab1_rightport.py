@@ -1,7 +1,6 @@
 # Kirsten Mayland
 # Lab1 - Computer Networks, Exercise 3, Part 3
 
-# Credit for help: https://www.digitalocean.com/community/tutorials/how-to-use-netcat-to-establish-and-test-tcp-and-udp-connections
 # Credit for help: https://www.geeksforgeeks.org/python-binding-and-listening-with-sockets/#
 # Discussed with: Selena Han
 
@@ -16,11 +15,13 @@ for source_port in range(2000, 3000): # valid ports 2000-2999
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
         # sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-        sock.bind(("0.0.0.0", source_port))     # 0.0.0.0 = eno2's broadcast
 
+        # bind test source port to default normal source port
+        sock.bind(("0.0.0.0", source_port))
+
+        # send message to bot and receive response
         sock.connect((bot_server, bot_port))
         sock.send(msg)
-
         response = sock.recv(1024).decode()
 
         if "Error: Incorrect source port." not in response:
