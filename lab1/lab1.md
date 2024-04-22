@@ -79,8 +79,9 @@ __Type 14/code 0__ (valid timestamp reply):
 ```bash
 sudo hping3 172.29.0.1 --icmp --icmp-ts -V -c 1
 ```    
+Credit for above query: https://serverfault.com/questions/710156/icmp-how-to-send-a-timestamp-and-netmask-request \
 \
-I discovered interesting hping3 fact, that -C (number) sets the icmp type and -K (number) sets the icmp code, so I was able to just create whatever IMCP codes I wanted as evidenced below. 
+I discovered interesting an hping3 fact, that -C (number) sets the icmp type and -K (number) sets the icmp code, so I was able to just create whatever IMCP codes I wanted as evidenced below. 
 #### For packet captures, see `Lab1-2ManuallyCreated.pcapng`. 
 __Type 3/code 0__ (destination unreachable, network unreachable)
 ```bash
