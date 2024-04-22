@@ -63,6 +63,7 @@ Using Wireshark, I captured the packet and saw that the TOKEN = c9VocB/J (see `L
 # Exercise 2
 
 ### <ins>Over Wifi</ins>:
+#### For packet captures, see `Lab1-2OverWifi.pcapng`. 
 __Type 0/code 0__ (valid echo reply): 
 ```bash
 kirstenm@DESKTOP-KirstenM:~$ ping 8.8.8.8 -c 1
@@ -71,25 +72,24 @@ __Type 11/code 0__ (time-to-live exceeded in transit) and __Type 3/code 3__ (des
 ```bash
 kirstenm@DESKTOP-KirstenM:~$ traceroute dartmouth.edu
 ```
+
 ### <ins>Over vEthernet(WSL)</ins>:
+#### For packet captures, see `Lab1-2OverEthernet(WSL).pcapng`. 
 __Type 14/code 0__ (valid timestamp reply):
 ```bash
 sudo hping3 172.29.0.1 --icmp --icmp-ts -V -c 1
 ```    
-
-
-
-
-I think this is deprecated, it won't send back a address mask reply
-```bash 
-sudo hping3 -C 17 -c 2 172.29.0.1    
-```                
-
-
-
-secunda ---> nc -l 8080
-primary ---> sudo hping3 192.168.59.11 --icmp --icmp-ts -V -c 2 -p 8080 
-
+\
+I discovered interesting hping3 fact, that -C (number) sets the icmp type and -K (number) sets the icmp code, so I was able to just create whatever IMCP codes I wanted as evidenced below. 
+#### For packet captures, see `Lab1-2ManuallyCreated.pcapng`. 
+__Type 3/code 0__ (destination unreachable, network unreachable)
+```bash
+sudo hping3 -c 1 -C 3 -K 0 172.26.83.109
+```
+__Type 5/code 1__ (redirect datagram from the host)
+```bash
+sudo hping3 -c 1 -C 5 -K 1 172.26.83.109
+```
 
 
 # Exercise 3
