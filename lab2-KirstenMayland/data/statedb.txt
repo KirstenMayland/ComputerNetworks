@@ -1,0 +1,50 @@
+AL|Alabama|Montgomery|December 14, 1819|Audemus jura nostra defendere (We dare to defend our rights)
+AK|Alaska|Juneau|January 3, 1959|North to the Future
+AZ|Arizona|Phoenix|February 14, 1912|Ditat Deus (God enriches)
+AR|Arkansas|Little Rock|June 15, 1836|Regnat populus (The people rule)
+CA|California|Sacramento|September 9, 1850|Eureka (I have found it)
+CO|Colorado|Denver|August 1, 1876|Nil sine numine (Nothing without Providence)
+CT|Connecticut|Hartford|January 9, 1788|Qui transtulit sustinet (He who transplanted sustains)
+DE|Delaware|Dover|December 7, 1787|Liberty and independence
+FL|Florida|Tallahassee|March 3, 1845|In God we trust
+GA|Georgia|Atlanta|January 2, 1788|Wisdom, justice, and moderation
+HI|Hawaii|Honolulu|August 21, 1959|Ua Mau ke Ea o ka 'Āina i ka Pono (Hawaiian, "The life of the land is perpetuated in righteousness")
+ID|Idaho|Boise|July 3, 1890|Esto perpetua (Let it be perpetual)
+IL|Illinois|Springfield|December 3, 1818|State sovereignty, national union
+IN|Indiana|Indianapolis|December 11, 1816|The crossroads of America
+IA|Iowa|Des Moines|December 28, 1846|Our liberties we prize and our rights we will maintain
+KS|Kansas|Topeka|January 29, 1861|Ad astra per aspera (To the stars through adversity)
+KY|Kentucky|Frankfort|June 1, 1792|United we stand, divided we fall / Deo gratiam habeamus (Let us give thanks to God)
+LA|Louisiana|Baton Rouge|April 30, 1812|Union, justice, and confidence
+ME|Maine|Augusta|March 15, 1820|Dirigo (I direct)
+MD|Maryland|Annapolis|April 28, 1788|Fatti maschi, parole femmine (Manly deeds, womanly words)
+MA|Massachusetts|Boston|February 6, 1788|Ense petit placidam sub libertate quietem (By the sword we seek peace, but peace only under liberty)
+MI|Michigan|Lansing|January 26, 1837|Si quaeris peninsulam amoenam circumspice / Tuebor (If you seek a pleasant peninsula, look about you / I will defend)
+MN|Minnesota|Saint Paul|May 11, 1858|L'étoile du Nord (The star of the North)
+MS|Mississippi|Jackson|December 10, 1817|Virtute et armis (By valor and arms)
+MO|Missouri|Jefferson City|August 10, 1821|Salus populi suprema lex esto (The Welfare of the People is the Highest Law)
+MT|Montana|Helena|November 8, 1889|Oro y plata (Gold and silver)
+NE|Nebraska|Lincoln|March 1, 1867|Equality before the law
+NV|Nevada|Carson City|October 31, 1864|All for our country
+NH|New Hampshire|Concord|June 21, 1788|Live free or die
+NJ|New Jersey|Trenton|December 18, 1787|Liberty and prosperity
+NM|New Mexico|Santa Fe|January 6, 1912|Crescit eundo (It grows as it goes)
+NY|New York|Albany|July 26, 1788|Excelsior! (Ever Upward!)
+NC|North Carolina|Raleigh|November 21, 1789|Esse quam videri (To be, rather than to seem)
+ND|North Dakota|Bismarck|November 2, 1889|Liberty and union, now and forever, one and inseparable / Strength from the soil
+OH|Ohio|Columbus|March 1, 1803|With God, all things are possible
+OK|Oklahoma|Oklahoma City|November 16, 1907|Labor omnia vincit (Hard work conquers all things)
+OR|Oregon|Salem|February 14, 1859|The Union / Alis volat propriis (She flies with her own wings)
+PA|Pennsylvania|Harrisburg|December 12, 1787|Virtue, liberty, and independence 
+RI|Rhode Island|Providence|May 19, 1790|Hope
+SC|South Carolina|Columbia|May 23, 1788|Dum spiro spero (While I breathe, I hope)
+SD|South Dakota|Pierre|November 2, 1889|Under God the people rule
+TN|Tennessee|Nashville|June 1, 1796|Agriculture and commerce
+TX|Texas|Austin|December 29, 1845|Friendship
+UT|Utah|Salt Lake City|January 4, 1896|Industry
+VT|Vermont|Montpelier|March 4, 1791|Freedom and Unity / Stella quarta decima fulgeat (May the 14th star shine bright)
+VA|Virginia|Richmond|June 25, 1788|Sic semper tyrannis (Thus always to tyrants)
+WA|Washington|Olympia|November 11, 1889|Al-ki (Chinook Jargon, "By and by")
+WV|West Virginia|Charleston|June 20, 1863|Montani semper liberi (Mountaineers are always free)
+WI|Wisconsin|Madison|May 29, 1848|Forward
+WY|Wyoming|Cheyenne|July 10, 1890|Equal rights

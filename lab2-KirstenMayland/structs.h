@@ -1,6 +1,6 @@
 
 
-#define MAXLINE 255
+#define MAXLINE 1024
 
 /* 
  *  Without "packed" the compiler will insert 

@@ -1,16 +1,21 @@
+# Kirsten Mayland
+# Makefile for Lab 2, Computer Networks 24S
+
 CFLAGS = -Wall -pedantic -std=c11 -ggdb
 VFLAGS = --leak-check=full --show-leak-kinds=all
 CC = gcc
 
 # -------------------------- #
 
-all: clean tcpcli
+all: tcpcli tcpserv
+
+remake: clean tcpcli tcpserv
 
 tcpserv: tcpserv.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-tcpcli: customProtocolClient.c
+tcpcli: tcpcli.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm tcpcli
+	rm tcpcli tcpserv *.gif
