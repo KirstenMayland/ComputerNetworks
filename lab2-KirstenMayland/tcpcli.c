@@ -135,7 +135,6 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
 
         if (n > 0) {
             total_bytes_read += n;
-            
             if (total_bytes_read >= size_of_buff) {
                 size_of_buff *= 2;
                 // Resize buffer
@@ -168,7 +167,6 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
     else{ // if result status is okay, show response
         int len;       
         len = ntohl(res->len);
-        printf("len: %d\n", len);
         if( len > 0 ){   
             // if receiving gifs
             if (opcode == 5 ) {
@@ -196,8 +194,6 @@ void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response
     }
     strcpy(str, statecode);
     strcat(str, ".gif");
-
-    printf("concat: %s\n", str);
 
     FILE *gifp = fopen(str, "w");
     fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, gifp);
