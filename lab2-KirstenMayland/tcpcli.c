@@ -39,7 +39,8 @@ The protocol: The following opcodes are implemented:
 #include "structs.h"
 
 #define SERV_TCP_PORT   8901
-#define SERV_HOST_ADDR  "129.170.212.8"    // packetbender.com = "71.19.146.5"  
+#define SERV_HOST_ADDR  "129.170.212.8" // thepond
+//#define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
 #define VERSION         1
 
 // local functions

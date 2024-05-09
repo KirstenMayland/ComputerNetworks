@@ -41,7 +41,6 @@ void process_request(int sockfd);
 char* query_database(char* statecode, int opcode, struct response *res);
 int getIndex(char key[]);
 void insert(char key[], struct state* value);
-int get(char key[], struct state *data);
 void create_database();
 void printMap();
 void freeMap();
@@ -118,17 +117,14 @@ int main(int argc, char	*argv[])
 }
 
 // ------------------------------process_request------------------------------
-void process_request(int sockfd)
-{
+void process_request(int sockfd) {
     int     n, len;    
-    uint8_t  version, opcode, status;
-    char statecode[2];
+    uint8_t  version, opcode;
     char *p;
 
     struct response res;
     struct request req;
     char buff[MAXLINE];
-    char str[MAXLINE];
 
     // receive message from client -----------------
     n = read(sockfd, buff, MAXLINE); 
@@ -146,24 +142,24 @@ void process_request(int sockfd)
     p = buff;
     version = *(uint8_t *)p;
     res.version = version;
-    printf("Got version: %d\n", version);
     p += sizeof(version);
 
     // get opcode from request
     opcode = *(uint8_t *)p;
-    printf("Got opcode: %d\n", opcode);
     p += sizeof(opcode);
-
-    printf("Got statecode: %s\n", p);
-    strcpy(str, query_database(p, opcode, &res));
+    
+    // get data to return
+    char* str = query_database(p, opcode, &res);
+    printf("data receieved: %s\n", str);
 
     // sprintf(str, "%s", data); // uncomment when complete above
     len = strlen(str);
-    res.len = htons(len);
+    res.len = htonl(len);
+    printf("length: %d\n", len);
+    strcpy(res.str, str);
 
-    strcpy( res.str, str );
-    n = len + sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  // len + 1 + 1 + 4
-    if (write(sockfd, (void*) &res, n) != n){
+    n = sizeof(res.version) + sizeof(res.status) + sizeof(res.len) + len;  // len + 1 + 1 + 4
+    if ( write(sockfd, (void*) &res, sizeof(res) ) != n){
         err_dump("TCP Server: process_request, write error");
         return;
     }
@@ -172,7 +168,6 @@ void process_request(int sockfd)
 
 // ------------------------------query_database------------------------------
 char* query_database(char* statecode, int opcode, struct response *res) {
-    printf("in query_database\n");
 
     if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
 
@@ -184,19 +179,20 @@ char* query_database(char* statecode, int opcode, struct response *res) {
         sc[0] = toupper(statecode[0]);
         sc[1] = toupper(statecode[1]);
         printf("sc: %s\n", sc);
-        struct state *data = malloc (sizeof(struct state)); // TODO: remember to free
-        //if ( get(sc, data) == 0) {
+
         int i = getIndex(sc);
         if (i != -1) {
-            printf("pretend op1: %s\n", values[i]->name);
-
-            // Additional debugging output
-            //printf("data->name address: %p\n", (void *)data->name);
-            //printf("data->name content: %s\n", data->name);
-            return values[i]->name;
+            if (opcode == 1) {
+                return values[i]->name;
+            } else if (opcode == 2) {
+                return values[i]->capital;
+            } else if (opcode == 3) {
+                return values[i]->date;
+            } else if (opcode == 4) {
+                return values[i]->motto;  
+            }
         }
     }
-    
     
     res->status = -1;
     return "NOT VALID QUERY";
@@ -229,7 +225,8 @@ void create_database() {
             } else if (t == 4) {
                 data->date = malloc(strlen(token) + 1); 
                 strcpy(data->date, token);
-            } else if (t == 5) {
+            } else if (t == 5) { //TODO: remove trailing new line char
+                token[strcspn(token, "\n")] = '\0';
                 data->motto = malloc(strlen(token) + 1);
                 strcpy(data->motto, token);          
             }
@@ -273,18 +270,6 @@ void insert(char key[], struct state* value) {
     } 
 } 
   
-// ------------------------------get------------------------------  
-// Function to get the value of a key in the map 
-// Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
-int get(char key[], struct state *data) { 
-    int index = getIndex(key); 
-    if (index >= 0 ) { // Key found 
-        data = values[index]; 
-        return 0;
-    }
-    return -1;
-} 
-
 // ------------------------------printMap------------------------------  
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
 void printMap() { 
