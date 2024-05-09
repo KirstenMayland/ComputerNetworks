@@ -19,10 +19,11 @@ For ease of testing, your server should take one argument: the port to listen on
 #include  <arpa/inet.h>
 #include  <stdio.h>
 #include  <strings.h> // bzero
-#include  <string.h> // bzero
+#include  <string.h>  // bzero
 #include  <stdlib.h>  // exit
 #include  <unistd.h>  // close
-#include <stdint.h>   // uint8_t
+#include  <stdint.h>  // uint8_t
+#include  <ctype.h>
 #include "structs.h"
 
 #define SERV_HOST_ADDR  "129.170.212.8"
@@ -31,14 +32,15 @@ For ease of testing, your server should take one argument: the port to listen on
 // creating database
 int size = 0;   // Current number of elements in the map 
 char keys[NUM_STATES][MAXLINE];
-struct state values[NUM_STATES];
+struct state* values[NUM_STATES];
 char* text_database = "data/statedb.txt";
 
 // local functions
 void err_dump(char *);
 void process_request(int sockfd);
+char* query_database(char* statecode, int opcode, struct response *res);
 int getIndex(char key[]);
-void insert(char key[], struct state value);
+void insert(char key[], struct state* value);
 int get(char key[], struct state *data);
 void create_database();
 void printMap();
@@ -89,7 +91,7 @@ int main(int argc, char	*argv[])
     listen(sockfd, 5);
 
     create_database();
-    // printMap();
+    //printMap();
     
     for ( ; ; ) {
         // Wait for a connection from a client process.
@@ -105,14 +107,14 @@ int main(int argc, char	*argv[])
         
         if (childpid == 0) {  // child process
             close(sockfd);  // close original socket
-            puts("TCP Server: In child, calling process_request");
+            printf("TCP Server: In child, calling process_request...\n");
             process_request(newsockfd);  // process the request, loops until peer closes connection
             exit(0);
         }
             
         close(newsockfd); // parent process
-        freeMap();
     }
+    freeMap();
 }
 
 // ------------------------------process_request------------------------------
@@ -153,7 +155,7 @@ void process_request(int sockfd)
     p += sizeof(opcode);
 
     printf("Got statecode: %s\n", p);
-    //str = query_database();    // TODO: get data from files
+    strcpy(str, query_database(p, opcode, &res));
 
     // sprintf(str, "%s", data); // uncomment when complete above
     len = strlen(str);
@@ -165,30 +167,36 @@ void process_request(int sockfd)
         err_dump("TCP Server: process_request, write error");
         return;
     }
-}
-
-// ------------------------------err_dump------------------------------
-void err_dump(char *msg)
-{
-    perror(msg);
-    freeMap();
-    exit(1);
+    printf("TCP Server: Response sent...\n");
 }
 
 // ------------------------------query_database------------------------------
-char* query_database(char* statecode, uint8_t opcode, struct response *res) {
-    // check that opcode is valid
-    if (opcode > HIGHEST_OPCODE || opcode < LOWEST_OPCODE) {
-        res->status = -1;
+char* query_database(char* statecode, int opcode, struct response *res) {
+    printf("in query_database\n");
+
+    if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
+        printf("both letters\n");
+        // TODO:
+        // use statecode as key and check if the state exists in the database
+        // if not exit, if so
+        // use opcode and case switch to get the corresponding char* from the state struct value or file from "/data/flags"
+        // NOTE: linux is case sensitive and the database is upcase and the flags are lowercase
+        
+        // convert statecode to uppercase for query purposes
+        char sc[2];
+        sc[0] = toupper(statecode[0]);
+        sc[1] = toupper(statecode[1]);
+        printf("sc: %s\n", sc);
+        struct state *data = malloc (sizeof(struct state)); // TODO: remember to free
+        if ( get(sc, data) == 0) {
+            printf("pretend op1: %s\n", data->name);
+            return data->name;
+        }
     }
     
-    // TODO:
-    // use statecode as key and check if the state exists in the database
-    // if not exit, if so
-    // use opcode and case switch to get the corresponding char* from the state struct value or file from "/data/flags"
-    // NOTE: linux is case sensitive and the database is upcase and the flags are lowercase
-
-    return "hi";
+    
+    res->status = -1;
+    return "NOT VALID QUERY";
 }
 
 // ------------------------------query_database------------------------------
@@ -200,32 +208,34 @@ void create_database() {
     }
 
     char line[MAXLINE];
+    // go through each line in the data file
     while (fgets(line, MAXLINE, fp) != NULL) {
         char *token = strtok(line, "|");
         char *abrev = token;
 
         int t = 1;
-        struct state *data = malloc (sizeof(struct state)); // TODO: remember to free after
-
+        struct state *data = malloc (sizeof(struct state)); 
+        // split the line up into tokens and store them respectively
         while (token != NULL) {
             if (t == 2) {
-                data->name = malloc(strlen(token) + 1); // TODO: remember to free after
+                data->name = malloc(strlen(token) + 1); 
                 strcpy(data->name, token);
             } else if (t == 3) {
-                data->capital = malloc(strlen(token) + 1); // TODO: remember to free after
+                data->capital = malloc(strlen(token) + 1);
                 strcpy(data->capital, token);
             } else if (t == 4) {
-                data->date = malloc(strlen(token) + 1); // TODO: remember to free after
+                data->date = malloc(strlen(token) + 1); 
                 strcpy(data->date, token);
             } else if (t == 5) {
-                data->motto = malloc(strlen(token) + 1); // TODO: remember to free after
-                strcpy(data->motto, token);          }
+                data->motto = malloc(strlen(token) + 1);
+                strcpy(data->motto, token);          
+            }
 
-            //printf("%s\n", token);
             token = strtok(NULL, "|");
             t += 1;
         }
-        insert(abrev, *data);
+        // store this data as a new key-value pair
+        insert(abrev, data);
     }
 
     fclose(fp);
@@ -248,7 +258,7 @@ int getIndex(char key[]) {
 // ------------------------------insert------------------------------  
 // Function to insert a key-value pair into the map 
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
-void insert(char key[], struct state value) { 
+void insert(char key[], struct state* value) { 
     int index = getIndex(key); 
     if (index == -1) { // Key not found 
         strcpy(keys[size], key); 
@@ -266,27 +276,35 @@ void insert(char key[], struct state value) {
 int get(char key[], struct state *data) { 
     int index = getIndex(key); 
     if (index >= 0 ) { // Key found 
-        data = &values[index]; 
+        data = values[index]; 
         return 0;
     }
-    return 1;
+    return -1;
 } 
 
 // ------------------------------printMap------------------------------  
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
 void printMap() { 
     for (int i = 0; i < size; i++) { 
-        printf("%s: %s -- %s -- %s -- %s\n", keys[i], values[i].name, values[i].capital, values[i].date, values[i].motto); 
+        printf("%s: %s -- %s -- %s -- %s\n", keys[i], values[i]->name, values[i]->capital, values[i]->date, values[i]->motto); 
     } 
 } 
   
-// ------------------------------freMap------------------------------  
+// ------------------------------freeMap------------------------------  
 void freeMap() {
     for (int i = 0; i < size; i++) {
-        free(values[i].name);
-        free(values[i].capital);
-        free(values[i].date);
-        free(values[i].motto);
-        free(&values[i]);
+        free(values[i]->name);
+        free(values[i]->capital);
+        free(values[i]->date);
+        free(values[i]->motto);
+        free(values[i]);
     } 
+}
+
+// ------------------------------err_dump------------------------------
+void err_dump(char *msg)
+{
+    perror(msg);
+    freeMap();
+    exit(1);
 }
