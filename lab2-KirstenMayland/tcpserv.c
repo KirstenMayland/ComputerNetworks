@@ -175,10 +175,7 @@ char* query_database(char* statecode, int opcode, struct response *res) {
     printf("in query_database\n");
 
     if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
-        printf("both letters\n");
-        // TODO:
-        // use statecode as key and check if the state exists in the database
-        // if not exit, if so
+
         // use opcode and case switch to get the corresponding char* from the state struct value or file from "/data/flags"
         // NOTE: linux is case sensitive and the database is upcase and the flags are lowercase
         
@@ -188,9 +185,15 @@ char* query_database(char* statecode, int opcode, struct response *res) {
         sc[1] = toupper(statecode[1]);
         printf("sc: %s\n", sc);
         struct state *data = malloc (sizeof(struct state)); // TODO: remember to free
-        if ( get(sc, data) == 0) {
-            printf("pretend op1: %s\n", data->name);
-            return data->name;
+        //if ( get(sc, data) == 0) {
+        int i = getIndex(sc);
+        if (i != -1) {
+            printf("pretend op1: %s\n", values[i]->name);
+
+            // Additional debugging output
+            //printf("data->name address: %p\n", (void *)data->name);
+            //printf("data->name content: %s\n", data->name);
+            return values[i]->name;
         }
     }
     
