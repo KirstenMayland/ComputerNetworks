@@ -10,5 +10,5 @@ Using `customProtocolClient.c`
 
 ### To submit:
 ```bash
-scp -P 106 -r lab2-KirstenMayland kirsten@thepond.cs.dartmouth.edu:submissions/lab2
+scp -P 106 -r ../lab2-KirstenMayland kirsten@thepond.cs.dartmouth.edu:submissions/lab2
 ```

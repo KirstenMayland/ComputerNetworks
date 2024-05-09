@@ -30,16 +30,19 @@ For ease of testing, your server should take one argument: the port to listen on
 
 // creating database
 int size = 0;   // Current number of elements in the map 
-char keys[NUM_STATES][HIGHEST_OPCODE-1];
-int values[HIGHEST_OPCODE-1];
+char keys[NUM_STATES][MAXLINE];
+struct state values[NUM_STATES];
 char* text_database = "data/statedb.txt";
 
 // local functions
 void err_dump(char *);
 void process_request(int sockfd);
 int getIndex(char key[]);
-void insert(char key[], int value);
-int get(char key[]);
+void insert(char key[], struct state value);
+int get(char key[], struct state *data);
+void create_database();
+void printMap();
+void freeMap();
 
 // ------------------------------main------------------------------
 int main(int argc, char	*argv[])
@@ -61,7 +64,8 @@ int main(int argc, char	*argv[])
     
     // Open a TCP socket (an Internet stream socket).
     if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        err_dump("TCP Server: Can't open stream socket");
+        fprintf(stderr, "TCP Server: Can't open stream socket\n");
+        exit(-1);
     } else {
         printf("TCP Server: Socket sucessfully created..\n");
     }
@@ -76,12 +80,16 @@ int main(int argc, char	*argv[])
     serv_addr.sin_port        = htons(serv_tcp_port);
     
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        err_dump("TCP Server: can't bind local address");
+        fprintf(stderr, "TCP Server: can't bind local address\n");
+        exit(-1);
     } else {
         printf("TCP Server: Successfully bound local address..\n");
     }
     
     listen(sockfd, 5);
+
+    create_database();
+    // printMap();
     
     for ( ; ; ) {
         // Wait for a connection from a client process.
@@ -103,6 +111,7 @@ int main(int argc, char	*argv[])
         }
             
         close(newsockfd); // parent process
+        freeMap();
     }
 }
 
@@ -115,39 +124,19 @@ void process_request(int sockfd)
     char *p;
 
     struct response res;
+    struct request req;
+    char buff[MAXLINE];
     char str[MAXLINE];
 
     // receive message from client -----------------
-    int total_bytes_read = 0;
-    int size_of_buff = MAXLINE;
-    char *buff = (char *)malloc(size_of_buff * sizeof(char)); // Allocate memory for buffer
-    if (buff == NULL) {
-        err_dump( "TCP Server: Buffer memory allocation failed" );
+    n = read(sockfd, buff, MAXLINE); 
+    if (n < 0) { // 
+        err_dump("TCP Server: process_request, read error");
     }
-
-    // TODO: enters here, doesn't appear to exit
-    for ( ; ; ) {  // keep reading into the buffer and increasing the size as necessary
-        n = read(sockfd, buff + total_bytes_read, size_of_buff - total_bytes_read);
-
-        if (n > 0) {
-            total_bytes_read += n;
-            if (total_bytes_read >= size_of_buff) {
-                size_of_buff *= 2;
-                // Resize buffer
-                buff = (char *)realloc(buff, size_of_buff * sizeof(char)); 
-                if (buff == NULL) {
-                    err_dump( "TCP Server: Buffer memory reallocation failed" );
-                }
-            }
-        } else if (n == 0) {  // End of request
-            printf("TCP Server: Has finished reading request..\n");
-            break;
-        }
-        else if (n < 0){
-            err_dump("TCP Server: process_request, read error");
-        }
+    else if (n < sizeof(req)) {
+        err_dump("TCP Server: process_request, request truncated");
     }
-
+    
     // process request from client -----------------
     res.status = 1;
 
@@ -156,12 +145,12 @@ void process_request(int sockfd)
     version = *(uint8_t *)p;
     res.version = version;
     printf("Got version: %d\n", version);
-    p += 1;
+    p += sizeof(version);
 
     // get opcode from request
     opcode = *(uint8_t *)p;
     printf("Got opcode: %d\n", opcode);
-    p += 1;
+    p += sizeof(opcode);
 
     printf("Got statecode: %s\n", p);
     //str = query_database();    // TODO: get data from files
@@ -170,7 +159,7 @@ void process_request(int sockfd)
     len = strlen(str);
     res.len = htons(len);
 
-    strncpy( res.str, str, len );
+    strcpy( res.str, str );
     n = len + sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  // len + 1 + 1 + 4
     if (write(sockfd, (void*) &res, n) != n){
         err_dump("TCP Server: process_request, write error");
@@ -182,6 +171,7 @@ void process_request(int sockfd)
 void err_dump(char *msg)
 {
     perror(msg);
+    freeMap();
     exit(1);
 }
 
@@ -209,22 +199,44 @@ void create_database() {
         return;
     }
 
+    char line[MAXLINE];
+    while (fgets(line, MAXLINE, fp) != NULL) {
+        char *token = strtok(line, "|");
+        char *abrev = token;
 
-    // TODO:
-    // go line by line, and split at the '|'
-    //fgets(); strtok();
-    // if string[0] aka the appreviation is not already a key,
-    // add a key value pair of [string[0], struct state]
-    // set the struct state's value to their corresponding values
+        int t = 1;
+        struct state *data = malloc (sizeof(struct state)); // TODO: remember to free after
+
+        while (token != NULL) {
+            if (t == 2) {
+                data->name = malloc(strlen(token) + 1); // TODO: remember to free after
+                strcpy(data->name, token);
+            } else if (t == 3) {
+                data->capital = malloc(strlen(token) + 1); // TODO: remember to free after
+                strcpy(data->capital, token);
+            } else if (t == 4) {
+                data->date = malloc(strlen(token) + 1); // TODO: remember to free after
+                strcpy(data->date, token);
+            } else if (t == 5) {
+                data->motto = malloc(strlen(token) + 1); // TODO: remember to free after
+                strcpy(data->motto, token);          }
+
+            //printf("%s\n", token);
+            token = strtok(NULL, "|");
+            t += 1;
+        }
+        insert(abrev, *data);
+    }
 
     fclose(fp);
+
+    printf("TCP Server: Created database...\n");
 }
   
 // ------------------------------getIndex------------------------------
 // Function to get the index of a key in the keys array 
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
-int getIndex(char key[]) 
-{ 
+int getIndex(char key[]) { 
     for (int i = 0; i < size; i++) { 
         if (strcmp(keys[i], key) == 0) { 
             return i; 
@@ -236,8 +248,7 @@ int getIndex(char key[])
 // ------------------------------insert------------------------------  
 // Function to insert a key-value pair into the map 
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
-void insert(char key[], int value) 
-{ 
+void insert(char key[], struct state value) { 
     int index = getIndex(key); 
     if (index == -1) { // Key not found 
         strcpy(keys[size], key); 
@@ -252,13 +263,30 @@ void insert(char key[], int value)
 // ------------------------------get------------------------------  
 // Function to get the value of a key in the map 
 // Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
-int get(char key[]) 
-{ 
+int get(char key[], struct state *data) { 
     int index = getIndex(key); 
-    if (index == -1) { // Key not found 
-        return -1; 
-    } 
-    else { // Key found 
-        return values[index]; 
+    if (index >= 0 ) { // Key found 
+        data = &values[index]; 
+        return 0;
+    }
+    return 1;
+} 
+
+// ------------------------------printMap------------------------------  
+// Credit: https://www.geeksforgeeks.org/implementation-on-map-or-dictionary-data-structure-in-c/#
+void printMap() { 
+    for (int i = 0; i < size; i++) { 
+        printf("%s: %s -- %s -- %s -- %s\n", keys[i], values[i].name, values[i].capital, values[i].date, values[i].motto); 
     } 
 } 
+  
+// ------------------------------freMap------------------------------  
+void freeMap() {
+    for (int i = 0; i < size; i++) {
+        free(values[i].name);
+        free(values[i].capital);
+        free(values[i].date);
+        free(values[i].motto);
+        free(&values[i]);
+    } 
+}
