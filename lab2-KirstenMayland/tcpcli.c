@@ -47,7 +47,8 @@ int version = 1;
 
 // local functions
 void worker_func( int sockfd, char statecode[2], uint8_t opcode );
-void create_local_gif(char statecode[2]);
+void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response *res);
+int read_socket(int sockfd, char* buff, int* total_bytes_read, int* size_of_buff);
 
 // ------------------------------main------------------------------
 int main( int argc, char *argv[] )
@@ -103,8 +104,6 @@ int main( int argc, char *argv[] )
 void worker_func( int sockfd, char statecode[2], uint8_t opcode )
 {
     int n, i;
-    char buff[MAXLINE];
-
     struct request req;
     struct response *res;
 
@@ -120,14 +119,39 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         exit(1);
     }
 
-    // receive response
-    n = read(sockfd, buff, MAXLINE);
-    if( n < 7 ){   //TODO: NOTE: magic integers are bad! What exactly is "7" and is it special? Make this better. 
-        perror("Message truncated");
+
+
+    // receive message from client
+    int total_bytes_read = 0;
+    int size_of_buff = MAXLINE;
+    char *buff = (char *)malloc(size_of_buff * sizeof(char)); // Allocate memory for buffer
+    if (buff == NULL) {
+        perror( "Buffer memory allocation failed" );
         exit(1);
     }
-    
+
+    for ( ; ; ) {  // keep reading into the buffer and increasing the size as necessary
+        n = read(sockfd, buff + total_bytes_read, size_of_buff - total_bytes_read);
+
+        if (n > 0) {
+            total_bytes_read += n;
+            
+            if (total_bytes_read >= size_of_buff) {
+                size_of_buff *= 2;
+                // Resize buffer
+                buff = (char *)realloc(buff, size_of_buff * sizeof(char)); 
+                if (buff == NULL) {
+                    perror( "Buffer memory reallocation failed" );
+                    exit(1);
+                }
+            }
+        } else if (n == 0) {
+            // End of file
+            break;
+        }
+    }
     res = (struct response *)buff;
+
 
     // process response
     // check if valid result
@@ -138,44 +162,47 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         }
         printf("\nPlease check you that you have the correct usage.\n");
         printf("Usage: ./tcpcli <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", lowest_opcode, highest_opcode);
+        free(buff);
         exit(1);
     }
     else{ // if result status is okay, show response
         int len;       
         len = ntohl(res->len);
+        printf("len: %d\n", len);
         if( len > 0 ){   
             // if receiving gifs
-            if (opcode == 5 ) { // TODO: Figure out how to represent gif as not the bytes
-                create_local_gif(statecode);
+            if (opcode == 5 ) {
+                process_gif(statecode, len, buff, res);
             }
             else {
                 fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, stdout );  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.
             }
         }
+        free(buff);
         printf("\n");          
     }
 }
 
-// ------------------------------create_local_gif------------------------------
-void create_local_gif(char statecode[2]) {
+
+
+// ------------------------------proccess_gif------------------------------
+void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response *res) {
 
     // create file naem
     char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
     if (str == NULL) {
-        fprintf(stderr, "create_local_gif: memory allocation failed\n");
+        fprintf(stderr, "process_gif: memory allocation failed\n");
         return;
     }
     strcpy(str, statecode);
     strcat(str, ".gif");
 
-
     printf("concat: %s\n", str);
 
-    fopen(str, "w");
+    FILE *gifp = fopen(str, "w");
+    fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, gifp);
 
-    //fwrite();
-
-    //fclose():
+    fclose(gifp);
 
     free(str); // Don't forget to free dynamically allocated memory
 }
