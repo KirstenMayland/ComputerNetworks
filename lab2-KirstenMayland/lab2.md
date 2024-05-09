@@ -6,4 +6,9 @@
 Using `customProtocolClient.c`
 
 
-scp -r lab2-KirstenMayland -p 106 kirsten@thepond.cs.dartmouth.edu:/submissions/lab2
+
+
+### To submit:
+```bash
+scp -P 106 -r lab2-KirstenMayland kirsten@thepond.cs.dartmouth.edu:submissions/lab2
+```

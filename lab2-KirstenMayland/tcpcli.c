@@ -38,12 +38,9 @@ The protocol: The following opcodes are implemented:
 #include <ctype.h>
 #include "structs.h"
 
-#define SERV_TCP_PORT   5050
-#define SERV_HOST_ADDR  "71.19.146.5"  
-
-int highest_opcode = 5;
-int lowest_opcode = 1;
-int version = 1;
+#define SERV_TCP_PORT   8901
+#define SERV_HOST_ADDR  "129.170.212.8"    // packetbender.com = "71.19.146.5"  
+#define VERSION         1
 
 // local functions
 void worker_func( int sockfd, char statecode[2], uint8_t opcode );
@@ -61,7 +58,7 @@ int main( int argc, char *argv[] )
 
     // check proper input format (general)
     if( argc != 3 || ! argv[1] || ! argv[2] || argv[1][2] || ! argv[1][1]){
-        fprintf(stderr, "Usage: %s <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", argv[0], lowest_opcode, highest_opcode);
+        fprintf(stderr, "Usage: %s <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", argv[0], LOWEST_OPCODE, HIGHEST_OPCODE);
         exit(-1);
     }
 
@@ -110,23 +107,21 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
     req.opcode = opcode;
     req.statecode[0] = statecode[0]; 
     req.statecode[1] = statecode[1];
-    req.version = version;
+    req.version = VERSION;
 
-    // send request to client
+    // send request to server
     n = write( sockfd, (void*) &req, sizeof(req));
     if( n < sizeof(req) ){
-        perror( "Error sending request" );
+        perror( "TCP CLient: Error sending request" );
         exit(1);
     }
 
-
-
-    // receive message from client
+    // receive message from server
     int total_bytes_read = 0;
     int size_of_buff = MAXLINE;
     char *buff = (char *)malloc(size_of_buff * sizeof(char)); // Allocate memory for buffer
     if (buff == NULL) {
-        perror( "Buffer memory allocation failed" );
+        perror( "TCP Client: Buffer memory allocation failed" );
         exit(1);
     }
 
@@ -140,7 +135,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
                 // Resize buffer
                 buff = (char *)realloc(buff, size_of_buff * sizeof(char)); 
                 if (buff == NULL) {
-                    perror( "Buffer memory reallocation failed" );
+                    perror( "TCP Client: Buffer memory reallocation failed" );
                     exit(1);
                 }
             }
@@ -160,7 +155,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
             printf("%02X%s", (uint8_t)buff[i], (i + 1)%16 ? " " : "\n");
         }
         printf("\nPlease check you that you have the correct usage.\n");
-        printf("Usage: ./tcpcli <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", lowest_opcode, highest_opcode);
+        printf("Usage: ./tcpcli <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", LOWEST_OPCODE, HIGHEST_OPCODE);
         free(buff);
         exit(1);
     }
@@ -189,13 +184,17 @@ void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response
     // create file naem
     char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
     if (str == NULL) {
-        fprintf(stderr, "process_gif: memory allocation failed\n");
+        fprintf(stderr, "TCP Client: process_gif: memory allocation failed\n");
         return;
     }
     strcpy(str, statecode);
     strcat(str, ".gif");
 
     FILE *gifp = fopen(str, "w");
+    if (gifp == NULL) {
+        fprintf(stderr, "TCP Client: process_gif: failed to open %s\n", str);
+        return;
+    }
     fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, gifp);
 
     fclose(gifp);
