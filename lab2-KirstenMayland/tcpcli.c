@@ -120,6 +120,12 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         exit(1);
     }
 
+    // NOTE: works as is, but here's another option
+    // 1. Receive header.
+    // 2. Header has the size of the flag in the payload field.
+    // 3. Allocate memory for flag.
+    // 4. Receive flag from socket and write to file.
+
     // receive message from server
     int total_bytes_read = 0;
     int size_of_buff = MAXLINE;
