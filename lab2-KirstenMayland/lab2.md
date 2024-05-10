@@ -7,8 +7,7 @@ Use `tcpcli.c` as standard --- finally works, currently set to talk to tcpserv b
 
 # Exercise 2 - Custom protocol _server_ via Berkeley sockets
 ## Task 2
-Use `tcpserv.c` as standard
-
+Use `tcpserv.c` as standard -- finally works, shouldn't break but doesn't have robust error responses
 
 # Overview
 ### On memory:

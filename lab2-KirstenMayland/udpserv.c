@@ -4,13 +4,15 @@
 
 /*
 -- INSTRUCTIONS ------------------------------------------------
-Implement a TCP server for the exact same protocol (version 1) as in Exercise 1.
-For ease of testing, your server should take one argument: the port to listen on.
+Implement a UDP server for the same protocol (version 1).
+Listen for requests on a UDP port, and return the answer over UDP if the answer fits inside a single UDP packet.
+If the answer would not fit, return a status code of 254, and the error string of “Response too large for UDP; try TCP”.
 
 -- CREDIT ------------------------------------------------
-* Adapted from "tcpserv.c" which was provided in class as c code of a demo server using TCP protocol
+* Adapted from my "tcpserv.c" which was an adaption of the "tcpserv.c" which was provided in class as c code of a demo server using TCP protocol
 * The demo code was adapted from W.R. Stevens' "Unix Network Programming", 1st ed. 
  */
+
 
 #include  <stdio.h>
 #include  <sys/types.h>
@@ -52,9 +54,10 @@ void freeMap();
 // ------------------------------main------------------------------
 int main(int argc, char	*argv[])
 {
-    int    sockfd, newsockfd, childpid, serv_tcp_port;
-    socklen_t clilen;
+    int    sockfd, serv_udp_port;
+    socklen_t addr_len = sizeof(struct sockaddr_in);
     struct sockaddr_in	cli_addr, serv_addr;
+    char buff[MAXLINE];
 
     // check proper input format (general)
     if( argc != 2 ){
@@ -65,14 +68,14 @@ int main(int argc, char	*argv[])
         exit(-1);
     }
 
-    serv_tcp_port = atoi(argv[1]);
+    serv_udp_port = atoi(argv[1]);
     
-    // Open a TCP socket (an Internet stream socket).
-    if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        fprintf(stderr, "TCP Server: Can't open stream socket\n");
+    // Open a UDP socket (an Internet stream socket).
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        fprintf(stderr, "UDP Server: Can't open stream socket\n");
         exit(-1);
     } else {
-        printf("TCP Server: Socket sucessfully created..\n");
+        printf("UDP Server: Socket sucessfully created..\n");
     }
     
     int optval = 1;
@@ -82,42 +85,36 @@ int main(int argc, char	*argv[])
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); //inet_addr(SERV_HOST_ADDR); 
-    serv_addr.sin_port        = htons(serv_tcp_port);
+    serv_addr.sin_port        = htons(serv_udp_port);
     
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        fprintf(stderr, "TCP Server: can't bind local address\n");
+        fprintf(stderr, "UDP Server: can't bind local address\n");
         exit(-1);
     } else {
-        printf("TCP Server: Successfully bound local address..\n");
+        printf("UDP Server: Successfully bound local address..\n");
     }
     
-    listen(sockfd, 5);
-
     create_database();
-    printf("TCP Server: Created database...\n");
+    printf("UDP Server: Created database...\n");
     //printMap();
     
+    printf("UDP Server: running on port %d...\n", serv_udp_port);
     for ( ; ; ) {
-        // Wait for a connection from a client process.
-        // This is an example of a concurrent server.
-        clilen = sizeof(cli_addr);
-        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-        if (newsockfd < 0)
-            err_dump("TCP Server: accept error");
-            
-        if ( (childpid = fork()) < 0)
-            err_dump("TCP Server: fork error");
-        
-        if (childpid == 0) {  // child process
-            close(sockfd);  // close original socket
-            printf("TCP Server: In child, calling process_request...\n");
-            process_request(newsockfd);  // process the request, loops until peer closes connection
-            exit(0);
+        // TODO:
+        // Receive data from clients
+        int bytesReceived = recvfrom(sockfd, buff, MAXLINE, 0, (struct sockaddr *)&cli_addr, &addr_len);
+        if (bytesReceived < 0) {
+            perror("Receive failed");
+            exit(EXIT_FAILURE);
         }
-            
-        close(newsockfd); // parent process
+
+        // Process received data (e.g., echo back)
+        printf("Received message: %s\n", buff);
+
+        // Send data back to client
+        sendto(sockfd, buff, bytesReceived, 0, (const struct sockaddr *)&cli_addr, addr_len);
     }
+    close(sockfd);
     freeMap();
 }
 
@@ -131,10 +128,10 @@ void process_request(int sockfd) {
     // receive message from client -----------------
     n = read(sockfd, buff, MAXLINE); 
     if (n < 0) { // 
-        err_dump("TCP Server: process_request, read error");
+        err_dump("UDP Server: process_request, read error");
     }
     else if (n < sizeof(*req)) {
-        err_dump("TCP Server: process_request, request truncated");
+        err_dump("UDP Server: process_request, request truncated");
     }
     req = (struct request *)buff;
 
@@ -149,7 +146,7 @@ void process_request(int sockfd) {
     else {   
         send_string_data(sockfd, req, res);
     }
-    printf("TCP Server: Response sent...\n");
+    printf("UDP Server: Response sent...\n");
 }
 
 // ------------------------------send_string_data------------------------------
@@ -165,13 +162,13 @@ void send_string_data(int sockfd, struct request* req, struct response res) {
     size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
     n = write(sockfd, (void*) &res, size);
     if ( n != size ){
-        err_dump("TCP Server: Error sending response");
+        err_dump("UDP Server: Error sending response");
         return;
     }
     // send data
     n = write(sockfd, (void*) string, len);
     if ( n != len ){
-        err_dump("TCP Server: Error sending response");
+        err_dump("UDP Server: Error sending response");
         return;
     }
 }
@@ -186,7 +183,7 @@ void send_gif(int sockfd, struct request* req, struct response res) {
     FILE *gifp = fopen(file, "rb");
     if (gifp == NULL) {
         res.status = -1;
-        fprintf(stderr, "TCP Server: process_gif: failed to open %s", file);
+        fprintf(stderr, "UDP Server: process_gif: failed to open %s", file);
         free(file);
         freeMap();
         exit(1);
@@ -201,7 +198,7 @@ void send_gif(int sockfd, struct request* req, struct response res) {
     size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
     n = write(sockfd, (void*) &res, size);
     if ( n != size ){
-        err_dump("TCP Server: Error sending response");
+        err_dump("UDP Server: Error sending response");
         return;
     }
 
@@ -251,7 +248,7 @@ char* get_gif_filename( char* statecode ) {
     sc[1] = tolower(statecode[1]);
     char *file = malloc(strlen(flags_loc) + strlen(sc) + strlen(".gif") + 1); // +1 for the null terminator
     if (file == NULL) {
-        err_dump("TCP Server: get_gif: memory allocation failed");
+        err_dump("UDP Server: get_gif: memory allocation failed");
     }
     strcpy(file, flags_loc);
     strcat(file, sc);
@@ -277,7 +274,7 @@ void err_dump(char *msg)
 void create_database() {
     FILE* fp = fopen(text_database, "r");
     if (fp == NULL) {
-        fprintf(stderr, "TCP Server: create_database: failed to open %s\n", text_database);
+        fprintf(stderr, "UDP Server: create_database: failed to open %s\n", text_database);
         exit(1);
     }
 
