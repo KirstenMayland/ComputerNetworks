@@ -34,14 +34,16 @@ int size = 0;   // Current number of elements in the map
 char keys[NUM_STATES][MAXLINE];
 struct state* values[NUM_STATES];
 char* text_database = "data/statedb.txt";
+char* flags_loc = "data/flags/";
 
 // local functions
 void err_dump(char *);
 void process_request(int sockfd);
 char* query_database(char* statecode, int opcode, struct response *res);
+char* get_gif(char* statecode);
+void create_database();
 int getIndex(char key[]);
 void insert(char key[], struct state* value);
-void create_database();
 void printMap();
 void freeMap();
 
@@ -118,8 +120,8 @@ int main(int argc, char	*argv[])
 
 // ------------------------------process_request------------------------------
 void process_request(int sockfd) {
-    int     n, len;    
-    uint8_t  version, opcode;
+    int n, len, size;    
+    uint8_t version, opcode;
     char *p;
 
     struct response res;
@@ -148,21 +150,22 @@ void process_request(int sockfd) {
     opcode = *(uint8_t *)p;
     p += sizeof(opcode);
     
-    // get data to return
+    // get data string to return
     char* str = query_database(p, opcode, &res);
-    printf("data receieved: %s\n", str);
-
-    // sprintf(str, "%s", data); // uncomment when complete above
-    len = strlen(str);
-    res.len = htonl(len);
-    printf("length: %d\n", len);
     strcpy(res.str, str);
 
-    n = sizeof(res.version) + sizeof(res.status) + sizeof(res.len) + len;  // len + 1 + 1 + 4
-    if ( write(sockfd, (void*) &res, sizeof(res) ) != n){
-        err_dump("TCP Server: process_request, write error");
+    // get length of data string
+    len = strlen(str);
+    res.len = htonl(len);
+
+    // send response back to client
+    size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len) + len;  // len + 1 + 1 + 4
+    n = write(sockfd, (void*) &res, sizeof(res));
+    if ( n < size){
+        err_dump("TCP Server: Error sending response");
         return;
     }
+
     printf("TCP Server: Response sent...\n");
 }
 
@@ -170,16 +173,12 @@ void process_request(int sockfd) {
 char* query_database(char* statecode, int opcode, struct response *res) {
 
     if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
-
-        // use opcode and case switch to get the corresponding char* from the state struct value or file from "/data/flags"
-        // NOTE: linux is case sensitive and the database is upcase and the flags are lowercase
-        
         // convert statecode to uppercase for query purposes
         char sc[2];
         sc[0] = toupper(statecode[0]);
         sc[1] = toupper(statecode[1]);
-        printf("sc: %s\n", sc);
 
+        // if statecode is in database, get consequent data
         int i = getIndex(sc);
         if (i != -1) {
             if (opcode == 1) {
@@ -190,12 +189,74 @@ char* query_database(char* statecode, int opcode, struct response *res) {
                 return values[i]->date;
             } else if (opcode == 4) {
                 return values[i]->motto;  
+            } else if (opcode == 5) {
+                return get_gif(sc);  
             }
         }
     }
-    
+    // statecode or opcode were not valid
     res->status = -1;
     return "NOT VALID QUERY";
+}
+
+// ------------------------------get_gif------------------------------
+char* get_gif( char* statecode ) {
+    // create file name
+    char sc[2];
+    sc[0] = tolower(statecode[0]);  // convert statecode to lowercase for query purposes
+    sc[1] = tolower(statecode[1]);
+    char *file = malloc(strlen(flags_loc) + strlen(sc) + strlen(".gif") + 1); // +1 for the null terminator
+    if (file == NULL) {
+        err_dump("TCP Server: get_gif: memory allocation failed");
+    }
+    strcpy(file, flags_loc);
+    strcat(file, sc);
+    strcat(file, ".gif");
+    printf("file bring read from: %s\n", file);
+
+    // read gif file into buff
+    FILE *gifp = fopen(file, "r");
+    if (gifp == NULL) {
+        fprintf(stderr, "TCP Server: process_gif: failed to open %s", file);
+        freeMap();
+        free(file);
+        exit(1);
+    }
+
+    // create buffer
+    int n;
+    int total_bytes_read = 0;
+    int size_of_buff = MAXLINE;
+    char *buff = (char *)malloc(size_of_buff * sizeof(char)); // Allocate memory for buffer //TODO: need to free somewhere
+    if (buff == NULL) {
+        free(file);
+        err_dump("TCP Server: Buffer memory allocation failed");
+    }
+
+    for ( ; ; ) {  // keep reading into the buffer and increasing the size as necessary
+        n = fread(buff, size_of_buff, 1, gifp);
+
+        if (n > 0) {
+            total_bytes_read += n;
+            if (total_bytes_read >= size_of_buff) {
+                size_of_buff *= 2;
+                // Resize buffer
+                buff = (char *)realloc(buff, size_of_buff * sizeof(char)); 
+                if (buff == NULL) {
+                    free(file);
+                    err_dump( "TCP Server: Buffer memory reallocation failed" );
+                }
+            }
+        } else if (n == 0) {
+            // End of file
+            break;
+        }
+    }
+
+    fclose(gifp);
+
+    free(file); // free dynamically allocated memory
+    return buff;
 }
 
 // ------------------------------query_database------------------------------
@@ -225,8 +286,8 @@ void create_database() {
             } else if (t == 4) {
                 data->date = malloc(strlen(token) + 1); 
                 strcpy(data->date, token);
-            } else if (t == 5) { //TODO: remove trailing new line char
-                token[strcspn(token, "\n")] = '\0';
+            } else if (t == 5) { 
+                token[strcspn(token, "\n")] = '\0'; // remove trailing new line char
                 data->motto = malloc(strlen(token) + 1);
                 strcpy(data->motto, token);          
             }

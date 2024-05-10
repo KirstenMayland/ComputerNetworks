@@ -1,14 +1,20 @@
 # Lab 2 - Computer Networks 24S, Kirsten Mayland
 ### A Custom TCP Protocol Client and Server via Berkeley Sockets
 
-# Exercise 1 - Custom protocol client via Berkeley sockets
-#### Disclaimer: Basis of submitted C code and Makefile was from the provided "Demo client/server C code"
-Using `customProtocolClient.c`
+# Exercise 1 - Custom protocol _client_ via Berkeley sockets
+
+Use `tcpcli.c` as standard --- finally works, currently set to talk to tcpserv but if you want it to talk to packetbender.com just switch the port and host address it talks to
+
+# Exercise 2 - Custom protocol _server_ via Berkeley sockets
+## Task 2
+Use `tcpserv.c` as standard
 
 
+# Overview
+### On memory:
+I did my best to free malloc'd data as I went but I have not run valgrind on any of this code and there might be many memory leaks that I've missed
 
-
-### To submit:
+### For personal reference to submit:
 ```bash
 scp -P 106 -r ../lab2-KirstenMayland kirsten@thepond.cs.dartmouth.edu:submissions/lab2
 ```

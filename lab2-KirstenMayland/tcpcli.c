@@ -38,9 +38,12 @@ The protocol: The following opcodes are implemented:
 #include <ctype.h>
 #include "structs.h"
 
-#define SERV_TCP_PORT   8901
+#define SERV_TCP_PORT   8901 // thepond
 #define SERV_HOST_ADDR  "129.170.212.8" // thepond
-//#define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
+
+// #define SERV_TCP_PORT   5050    // packetbender.com
+// #define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
+
 #define VERSION         1
 
 // local functions
@@ -182,7 +185,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
 // ------------------------------proccess_gif------------------------------
 void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response *res) {
 
-    // create file naem
+    // create file name
     char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
     if (str == NULL) {
         fprintf(stderr, "TCP Client: process_gif: memory allocation failed\n");
