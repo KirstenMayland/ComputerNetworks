@@ -40,8 +40,9 @@ char* flags_loc = "data/flags/";
 void err_dump(char *);
 void process_request(int sockfd);
 char* get_gif_filename( char* statecode );
+void send_gif(int sockfd, struct request* req, struct response res);
+void send_string_data(int sockfd, struct request* req, struct response res);
 char* query_database(char* statecode, int opcode, struct response *res);
-char* get_gif(char* statecode);
 void create_database();
 int getIndex(char key[]);
 void insert(char key[], struct state* value);
@@ -121,8 +122,7 @@ int main(int argc, char	*argv[])
 
 // ------------------------------process_request------------------------------
 void process_request(int sockfd) {
-    int n, len, size;    
-
+    int n;
     struct response res;
     struct request* req;
     char buff[MAXLINE];
@@ -137,83 +137,89 @@ void process_request(int sockfd) {
     }
     req = (struct request *)buff;
 
-    // formulate response -----------------
+
+    // send response back -----------------
     res.version = req->version;
     res.status = 1;
 
-    // response if requesting gif --
     if (req->opcode == 5) {
-        // TODO:
-        // first get filename and open file in rb
-        char * file = get_gif_filename(req->statecode);
-        FILE *gifp = fopen(file, "rb");
-        if (gifp == NULL) {
-            res.status = -1;
-            fprintf(stderr, "TCP Server: process_gif: failed to open %s", file);
-            free(file);
-            freeMap();
-            exit(1);
-        }
-        // then determine size of file
-        fseek(gifp, 0L, SEEK_END);
-        long length = ftell(gifp);
-        rewind(gifp);
+       send_gif(sockfd, req, res);
+    }
+    else {   
+        send_string_data(sockfd, req, res);
+    }
+    printf("TCP Server: Response sent...\n");
+}
 
-        // add length to header and send header
-        res.len = htonl(length);
-        size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
-        n = write(sockfd, (void*) &res, size);
-        if ( n != size ){
-            err_dump("TCP Server: Error sending response");
-            return;
-        }
+// ------------------------------send_string_data------------------------------
+void send_string_data(int sockfd, struct request* req, struct response res) {
+    int n, len, size;
 
-        // Read and send the GIF file in chunks
-        ssize_t bytes_read;
-        char buffer[1024];
-        while ((bytes_read = fread(buffer, 1, sizeof(buffer), gifp)) > 0) {
-            if (send(sockfd, buffer, bytes_read, 0) < 0) {
-                err_dump("Error sending GIF file");
-            }
-        }
-        fclose(gifp);
+    // get string and its length
+    char* string = query_database(req->statecode, req->opcode, &res);
+    len = strlen(string);
+    res.len = htonl(len);
+
+    // send header
+    size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
+    n = write(sockfd, (void*) &res, size);
+    if ( n != size ){
+        err_dump("TCP Server: Error sending response");
+        return;
+    }
+    // send data
+    n = write(sockfd, (void*) string, len);
+    printf("length of string = %d; n = %d\n", len, n);
+    if ( n != len ){
+        err_dump("TCP Server: Error sending response");
+        return;
+    }
+}
+
+// ------------------------------send_gif------------------------------
+void send_gif(int sockfd, struct request* req, struct response res) {
+    int n, size;
+    long length;
+
+    // first get filename and open file in rb
+    char * file = get_gif_filename(req->statecode);
+    FILE *gifp = fopen(file, "rb");
+    if (gifp == NULL) {
+        res.status = -1;
+        fprintf(stderr, "TCP Server: process_gif: failed to open %s", file);
         free(file);
-
+        freeMap();
+        exit(1);
     }
-    else { // response if requesting text --
-        // get data string to return
-        char* string = query_database(req->statecode, req->opcode, &res);
-        printf("string from database: %s\n", string);
-        
-        // get length of data string
-        len = strlen(string);
-        res.len = htonl(len);
+    // then determine size of file
+    fseek(gifp, 0L, SEEK_END);
+    length = ftell(gifp);
+    rewind(gifp);
 
-        // send response back to client
-        // send header
-        size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
-        n = write(sockfd, (void*) &res, size);
-        if ( n != size ){
-            err_dump("TCP Server: Error sending response");
-            return;
-        }
-        // send data
-        n = write(sockfd, (void*) string, len);
-        printf("length of string = %d; n = %d\n", len, n);
-        if ( n != len ){
-            err_dump("TCP Server: Error sending response");
-            return;
-        }
-
-        free(string);
-        printf("TCP Server: Response sent...\n");
+    // add length to header and send header
+    res.len = htonl(length);
+    size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
+    n = write(sockfd, (void*) &res, size);
+    if ( n != size ){
+        err_dump("TCP Server: Error sending response");
+        return;
     }
+
+    // Read and send the GIF file in chunks
+    ssize_t bytes_read;
+    char buffer[1024];
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), gifp)) > 0) {
+        if (send(sockfd, buffer, bytes_read, 0) < 0) {
+            err_dump("Error sending GIF file");
+        }
+    }
+    fclose(gifp);
+    free(file);
 }
 
 // ------------------------------query_database------------------------------
 char* query_database(char* statecode, int opcode, struct response *res) {
-
-    if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
+    if ( isalpha(statecode[0]) && isalpha(statecode[1]) ) {
         // convert statecode to uppercase for query purposes
         char sc[2];
         sc[0] = toupper(statecode[0]);
@@ -233,7 +239,6 @@ char* query_database(char* statecode, int opcode, struct response *res) {
             }
         }
     }
-    // statecode or opcode were not valid
     res->status = -1;
     return "NOT VALID QUERY";
 }

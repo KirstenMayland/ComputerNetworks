@@ -61,7 +61,7 @@ int main( int argc, char *argv[] )
     unsigned int opcode;
 
     // check proper input format (general)
-    if( argc != 3 || ! argv[1] || ! argv[2] || argv[1][2] || ! argv[1][1]){
+    if( argc != 3 || ! argv[1] || ! argv[2] || argv[1][2] || ! argv[1][1] ){
         fprintf(stderr, "Usage: %s <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", argv[0], LOWEST_OPCODE, HIGHEST_OPCODE);
         exit(-1);
     }
