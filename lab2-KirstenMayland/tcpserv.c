@@ -41,8 +41,10 @@ void err_dump(char *);
 void process_request(int sockfd);
 char* get_gif_filename( char* statecode );
 void send_gif(int sockfd, struct request* req, struct response res);
-void send_string_data(int sockfd, struct request* req, struct response res);
-char* query_database(char* statecode, int opcode, struct response *res);
+void send_string_data(int sockfd, struct request* req, struct response res, int i);
+void send_error(int sockfd, struct request* req, struct response res, char* error_msg);
+int check_valid_query(int sockfd, struct request* req, struct response res);
+char* query_database(char* statecode, int opcode, struct response *res, int i);
 void create_database();
 int getIndex(char key[]);
 void insert(char key[], struct state* value);
@@ -143,21 +145,27 @@ void process_request(int sockfd) {
     res.version = req->version;
     res.status = 1;
 
-    if (req->opcode == 5) {
-       send_gif(sockfd, req, res);
+    int i = check_valid_query(sockfd, req, res);
+    if ( i != -1 ) {
+        if (req->opcode == 5) {
+            send_gif(sockfd, req, res);
+        }
+        else {   
+            send_string_data(sockfd, req, res, i);
+        }
+        printf("TCP Server: Response sent...\n");
     }
-    else {   
-        send_string_data(sockfd, req, res);
+    else {
+        printf("TCP Server: Error response sent...\n");
     }
-    printf("TCP Server: Response sent...\n");
 }
 
 // ------------------------------send_string_data------------------------------
-void send_string_data(int sockfd, struct request* req, struct response res) {
+void send_string_data(int sockfd, struct request* req, struct response res, int i) {
     int n, len, size;
 
     // get string and its length
-    char* string = query_database(req->statecode, req->opcode, &res);
+    char* string = query_database(req->statecode, req->opcode, &res, i);
     len = strlen(string);
     res.len = htonl(len);
 
@@ -217,30 +225,45 @@ void send_gif(int sockfd, struct request* req, struct response res) {
     free(file);
 }
 
-// ------------------------------query_database------------------------------
-char* query_database(char* statecode, int opcode, struct response *res) {
-    if ( isalpha(statecode[0]) && isalpha(statecode[1]) ) {
-        // convert statecode to uppercase for query purposes
-        char sc[2];
-        sc[0] = toupper(statecode[0]);
-        sc[1] = toupper(statecode[1]);
+// ------------------------------send_error------------------------------
+void send_error(int sockfd, struct request* req, struct response res, char* error_msg) {
+    int n, len, size;
 
-        // if statecode is in database, get consequent data
-        int i = getIndex(sc);
-        if (i != -1) {
-            if (opcode == 1) {
-                return values[i]->name;
-            } else if (opcode == 2) {
-                return values[i]->capital;
-            } else if (opcode == 3) {
-                return values[i]->date;
-            } else if (opcode == 4) {
-                return values[i]->motto;  
-            }
-        }
+    res.status = 255;
+
+    // get string and its length
+    len = strlen(error_msg);
+    res.len = htonl(len);
+
+    // send header
+    size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
+    n = write(sockfd, (void*) &res, size);
+    if ( n != size ){
+        err_dump("TCP Server: Error sending response");
+        return;
     }
-    res->status = -1;
-    return "NOT VALID QUERY";
+    // send data
+    n = write(sockfd, (void*) error_msg, len);
+    if ( n != len ){
+        err_dump("TCP Server: Error sending response");
+        return;
+    }
+}
+
+
+// ------------------------------query_database------------------------------
+char* query_database(char* statecode, int opcode, struct response *res, int i) {
+
+    if (opcode == 1) {
+        return values[i]->name;
+    } else if (opcode == 2) {
+        return values[i]->capital;
+    } else if (opcode == 3) {
+        return values[i]->date;
+    } else if (opcode == 4) {
+        return values[i]->motto;  
+    }
+    return "ERROR";
 }
 
 // ------------------------------get_gif_filename------------------------------
@@ -258,6 +281,34 @@ char* get_gif_filename( char* statecode ) {
     strcat(file, ".gif");
 
     return file;
+}
+
+// ------------------------------check_valid_query------------------------------
+int check_valid_query(int sockfd, struct request* req, struct response res) {
+    printf("TCP Server: Checking query validity...\n");
+    // check opcode
+    if ( req->opcode > HIGHEST_OPCODE || req->opcode < LOWEST_OPCODE) {
+        send_error(sockfd, req, res, "invalid opcode");
+        return -1;
+    }
+    // check statecode format
+    if ( ! isalpha(req->statecode[0]) || ! isalpha(req->statecode[1]) )  {
+        send_error(sockfd, req, res, "invalid statecode format");
+        return -1;
+    }
+
+    // check if real statecode
+    char sc[2];
+    sc[0] = toupper(req->statecode[0]); // convert statecode to uppercase for query purposes
+    sc[1] = toupper(req->statecode[1]);
+    int i = getIndex(sc);
+
+    if ( i < 0) {
+        send_error(sockfd, req, res, "statecode does not exist");
+        return -1;
+    }
+
+    return i;  // if statecode is in database, get consequent data
 }
 
 // ------------------------------err_dump------------------------------

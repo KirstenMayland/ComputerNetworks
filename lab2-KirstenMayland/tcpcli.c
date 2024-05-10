@@ -164,7 +164,6 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
             printf("%02X%s", (uint8_t)buff[i], (i + 1)%16 ? " " : "\n");
         }
         printf("\nPlease check you that you have the correct usage.\n");
-        printf("Usage: ./tcpcli <state code> <opcode>, where <state code> is valid two letter code (eg. pa, Wi, NH) and <opcode> is an integer from %d to %d inclusive\n", LOWEST_OPCODE, HIGHEST_OPCODE);
         free(buff);
         exit(1);
     }
