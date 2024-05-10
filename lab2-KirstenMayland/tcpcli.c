@@ -150,7 +150,6 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
     }
     res = (struct response *)buff;
 
-
     // process response
     // check if valid result
     if( res->status != RESULT_STATUS_OK ){

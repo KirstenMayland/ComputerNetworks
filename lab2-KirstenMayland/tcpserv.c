@@ -39,8 +39,8 @@ char* flags_loc = "data/flags/";
 // local functions
 void err_dump(char *);
 void process_request(int sockfd);
-char* query_database(char* statecode, int opcode, struct response *res);
-char* get_gif(char* statecode);
+char* query_database(char* statecode, int opcode, struct response *res, char *buff, int size_of_buff);
+char* get_gif( char* statecode, char *buff, int size_of_buff );
 void create_database();
 int getIndex(char key[]);
 void insert(char key[], struct state* value);
@@ -122,10 +122,9 @@ int main(int argc, char	*argv[])
 void process_request(int sockfd) {
     int n, len, size;    
     uint8_t version, opcode;
-    char *p;
 
     struct response res;
-    struct request req;
+    struct request* req;
     char buff[MAXLINE];
 
     // receive message from client -----------------
@@ -133,44 +132,49 @@ void process_request(int sockfd) {
     if (n < 0) { // 
         err_dump("TCP Server: process_request, read error");
     }
-    else if (n < sizeof(req)) {
+    else if (n < sizeof(*req)) {
         err_dump("TCP Server: process_request, request truncated");
     }
-    
+    req = (struct request *)buff;
+
     // process request from client -----------------
     res.status = 1;
 
-    // get version from request and write into response
-    p = buff;
-    version = *(uint8_t *)p;
-    res.version = version;
-    p += sizeof(version);
+    // TODO:
+    // goal 1: is to read and store the whole gif from the database
+    // goal 2: is to figure out how to send the whole thing
 
-    // get opcode from request
-    opcode = *(uint8_t *)p;
-    p += sizeof(opcode);
-    
+    int size_of_buffer = MAXLINE;
+    char *buffer = (char *)malloc(size_of_buffer * sizeof(char)); //TODO: need to this free eventually
+    if (buffer == NULL) {
+        err_dump("TCP Server: Buffer memory allocation failed");
+    }
+
     // get data string to return
-    char* str = query_database(p, opcode, &res);
-    strcpy(res.str, str);
-
+    char* string = query_database(req->statecode, req->opcode, &res, buffer, size_of_buffer);
+    printf("string from database: %s\n", string);
+    strcpy(res.str, string);
+    
     // get length of data string
-    len = strlen(str);
+    len = strlen(string);
     res.len = htonl(len);
+    printf("len of said string: %d\n", len);
 
     // send response back to client
     size = sizeof(res.version) + sizeof(res.status) + sizeof(res.len) + len;  // len + 1 + 1 + 4
-    n = write(sockfd, (void*) &res, sizeof(res));
-    if ( n < size){
+    n = write(sockfd, (void*) &res, size);
+    printf("size = %d; n = %d\n", size, n);
+    if ( n != size ){
         err_dump("TCP Server: Error sending response");
         return;
     }
 
+    free(buffer);
     printf("TCP Server: Response sent...\n");
 }
 
 // ------------------------------query_database------------------------------
-char* query_database(char* statecode, int opcode, struct response *res) {
+char* query_database(char* statecode, int opcode, struct response *res, char *buff, int size_of_buff) {
 
     if ( isalpha(statecode[0]) && isalpha(statecode[1])) {
         // convert statecode to uppercase for query purposes
@@ -190,7 +194,7 @@ char* query_database(char* statecode, int opcode, struct response *res) {
             } else if (opcode == 4) {
                 return values[i]->motto;  
             } else if (opcode == 5) {
-                return get_gif(sc);  
+                return get_gif(sc, buff, size_of_buff);  
             }
         }
     }
@@ -200,7 +204,7 @@ char* query_database(char* statecode, int opcode, struct response *res) {
 }
 
 // ------------------------------get_gif------------------------------
-char* get_gif( char* statecode ) {
+char* get_gif( char* statecode, char *buff, int size_of_buff ) {
     // create file name
     char sc[2];
     sc[0] = tolower(statecode[0]);  // convert statecode to lowercase for query purposes
@@ -214,7 +218,7 @@ char* get_gif( char* statecode ) {
     strcat(file, ".gif");
     printf("file bring read from: %s\n", file);
 
-    // read gif file into buff
+    // open gif file to be read
     FILE *gifp = fopen(file, "r");
     if (gifp == NULL) {
         fprintf(stderr, "TCP Server: process_gif: failed to open %s", file);
@@ -226,36 +230,60 @@ char* get_gif( char* statecode ) {
     // create buffer
     int n;
     int total_bytes_read = 0;
-    int size_of_buff = MAXLINE;
-    char *buff = (char *)malloc(size_of_buff * sizeof(char)); // Allocate memory for buffer //TODO: need to free somewhere
-    if (buff == NULL) {
-        free(file);
-        err_dump("TCP Server: Buffer memory allocation failed");
-    }
 
-    for ( ; ; ) {  // keep reading into the buffer and increasing the size as necessary
-        n = fread(buff, size_of_buff, 1, gifp);
-
+    // NOTE: Option 1
+    // create temp buff gets a line read and then copy the temp on the end of an ever growing actual buff
+    for ( ; ; ) {
+        char *temp_buff = (char *)malloc(size_of_buff * sizeof(char));
+        if (temp_buff == NULL) {
+            err_dump("TCP Server: Buffer memory allocation failed");
+        }
+        n = fread(temp_buff, sizeof(char), size_of_buff, gifp);
         if (n > 0) {
-            total_bytes_read += n;
-            if (total_bytes_read >= size_of_buff) {
-                size_of_buff *= 2;
-                // Resize buffer
-                buff = (char *)realloc(buff, size_of_buff * sizeof(char)); 
-                if (buff == NULL) {
-                    free(file);
-                    err_dump( "TCP Server: Buffer memory reallocation failed" );
-                }
+            buff = (char *)realloc(buff, (total_bytes_read + n + 1) * sizeof(char)); 
+            if (buff == NULL) {
+                err_dump("TCP Server: get_gif: memory allocation failed");
             }
-        } else if (n == 0) {
-            // End of file
+
+            // Copy temp_buff data to buff
+            memcpy(buff + total_bytes_read, temp_buff, n);
+            total_bytes_read += n;
+            //buff[total_bytes_read] = '\0'; // Null terminate the concatenated string // NOTE: is this needed?
+
+        } else {
+            free(temp_buff); // Free temp_buff since it's no longer needed
             break;
         }
     }
 
-    fclose(gifp);
+    // NOTE: Option 2
+    // read from file into buffer and increase the buffer size as necessary
+    // for ( ; ; ) { 
+    //     n = fread(buff + total_bytes_read, 1, *size_of_buff - total_bytes_read, gifp); // TODO: something screwy here?
+    //     if (n > 0) {
+    //         total_bytes_read += n;
+    //         if (total_bytes_read >= *size_of_buff) {
+    //             printf("total_bytes_read: %d\n", total_bytes_read);
+    //             *size_of_buff *= 2;
 
+    //             // Resize buffer
+    //             char* temp = realloc(buff, *size_of_buff * sizeof(char)); 
+    //             if (temp == NULL) {
+    //                 free(file);
+    //                 err_dump("TCP Server: Buffer memory reallocation failed");
+    //             } else {
+    //                 buff = temp;
+    //             }
+    //         }
+    //     } else if (n == 0) {
+    //         // End of file
+    //         break;
+    //     }
+    // }
+
+    fclose(gifp);
     free(file); // free dynamically allocated memory
+
     return buff;
 }
 

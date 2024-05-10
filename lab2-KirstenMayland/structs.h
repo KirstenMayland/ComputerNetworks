@@ -23,7 +23,7 @@ struct response {
      uint8_t version;
      uint8_t  status;
      uint32_t len;
-     char     str[MAXLINE];
+     char str[MAXLINE];
 } __attribute__((packed));
 
 struct state {
