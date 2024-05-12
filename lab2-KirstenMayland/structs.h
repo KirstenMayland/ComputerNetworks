@@ -2,7 +2,7 @@
 // Lab 2 Computer Networks
 // Spring 2024
 
-#define MAXLINE 255
+#define MAXLINE 1024
 #define RESULT_STATUS_OK   1
 #define HIGHEST_OPCODE  5
 #define LOWEST_OPCODE   1

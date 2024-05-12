@@ -3,11 +3,14 @@
 
 # Exercise 1 - Custom protocol _client_ via Berkeley sockets
 
-Use `tcpcli.c` as standard --- finally works, currently set to talk to tcpserv but if you want it to talk to packetbender.com just switch the port and host address it talks to
+Use `./tcpcli` as standard --- finally works, currently set to talk to tcpserv but if you want it to talk to packetbender.com just switch the port and host address it talks to
 
 # Exercise 2 - Custom protocol _server_ via Berkeley sockets
+## Task 1
+Use `./tcpserv` as standard -- finally works, shouldn't break but doesn't have robust error responses
+
 ## Task 2
-Use `tcpserv.c` as standard -- finally works, shouldn't break but doesn't have robust error responses
+Similar to tcpcli/serv, run `./udpcli` and `./udpserv` on your computer and the pong respectively
 
 # Overview
 ### On memory:

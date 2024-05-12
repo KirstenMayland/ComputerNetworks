@@ -5,18 +5,24 @@ CC = gcc
 CFLAGS = -Wall -pedantic -std=c11 -ggdb
 VFLAGS = --leak-check=full --show-leak-kinds=all
 
-OBJS = database.o
+OBJS_S = database.o
 
 # -------------------------- #
 
 
-all: tcpcli tcpserv
-
-tcpserv: tcpserv.o $(OBJS)
-	$(CC) $(CFLAGS) -o tcpserv tcpserv.o $(OBJS)
+all: tcpcli tcpserv udpcli udpserv
 
 tcpcli: tcpcli.c
 	$(CC) $(CFLAGS) -o $@ $<
 
+tcpserv: tcpserv.o $(OBJS_S)
+	$(CC) $(CFLAGS) -o tcpserv tcpserv.o $(OBJS_S)
+
+udpcli: udpcli.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+udpserv: udpserv.o $(OBJS_S)
+	$(CC) $(CFLAGS) -o udpserv udpserv.o $(OBJS_S)
+
 clean:
-	rm tcpcli tcpserv *.gif *.o
+	rm tcpcli tcpserv udpcli udpserv *.gif *.o

@@ -1,4 +1,6 @@
 tcpcli
 tcpserv
+udpcli
+udpserv
 *.gif
 *.o

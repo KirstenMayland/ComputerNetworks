@@ -87,7 +87,6 @@ int main(int argc, char	*argv[])
     struct state* values[NUM_STATES];
     create_database(TEXT_DATABASE, keys, values, &size);
     printf("TCP Server: Created database...\n");
-    //printMap();
     
     for ( ; ; ) {
         // Wait for a connection from a client process.
