@@ -36,20 +36,18 @@ The protocol: The following opcodes are implemented:
 #include  <unistd.h>  // close
 #include <stdint.h>   // uint8_t
 #include <ctype.h>
-#include "structs.h"
+#include "client.h"
 
-#define SERV_TCP_PORT   8901 // thepond
-#define SERV_HOST_ADDR  "129.170.212.8" // thepond
+// #define SERV_TCP_PORT   8901 // thepond
+// #define SERV_HOST_ADDR  "129.170.212.8" // thepond
 
-// #define SERV_TCP_PORT   5050    // packetbender.com
-// #define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
+#define SERV_TCP_PORT   5050    // packetbender.com
+#define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
 
 #define VERSION         1
 
 // local functions
 void worker_func( int sockfd, char statecode[2], uint8_t opcode );
-void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response *res);
-int read_socket(int sockfd, char* buff, int* total_bytes_read, int* size_of_buff);
 
 // ------------------------------main------------------------------
 int main( int argc, char *argv[] )
@@ -155,6 +153,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         }
     }
     res = (struct response *)buff;
+    printf("total_bytes_read = %d\n", total_bytes_read);
 
     // process response
     // check if valid result
@@ -172,40 +171,15 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         len = ntohl(res->len);
         if( len > 0 ){   
             // if receiving gifs
+            int header_size = sizeof(*res);
             if (opcode == 5 ) {
-                process_gif(statecode, len, buff, res);
+                process_gif(statecode, len, buff + header_size, res);
             }
             else {
-                fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, stdout );  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.
+                fwrite( buff + header_size, len, 1, stdout );  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.
             }
         }
         free(buff);
         printf("\n");          
     }
-}
-
-
-
-// ------------------------------proccess_gif------------------------------
-void process_gif(char statecode[2], int len, char buff[MAXLINE], struct response *res) {
-
-    // create file name
-    char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
-    if (str == NULL) {
-        fprintf(stderr, "TCP Client: process_gif: memory allocation failed\n");
-        return;
-    }
-    strcpy(str, statecode);
-    strcat(str, ".gif");
-
-    FILE *gifp = fopen(str, "w");
-    if (gifp == NULL) {
-        fprintf(stderr, "TCP Client: process_gif: failed to open %s\n", str);
-        return;
-    }
-    fwrite( buff + sizeof(res->version) + sizeof(res->status) + sizeof(res->len), len, 1, gifp);
-
-    fclose(gifp);
-
-    free(str); // Don't forget to free dynamically allocated memory
 }

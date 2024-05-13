@@ -35,7 +35,7 @@ The protocol: The following opcodes are implemented:
 #include  <unistd.h>  // close
 #include  <stdint.h>   // uint8_t
 #include  <ctype.h>
-#include  "structs.h"
+#include  "client.h"
 
 #define SERV_UDP_PORT   8901 // thepond
 #define SERV_HOST_ADDR  "129.170.212.8" // thepond
@@ -45,8 +45,6 @@ int timeout_in_seconds = 1;
 
 // local functions
 void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr_in serv_addr, socklen_t addr_len );
-void process_gif(char statecode[2], int len, char* buffer, struct response *res);
-int read_socket(int sockfd, char* buff, int* total_bytes_read, int* size_of_buff);
 
 // ------------------------------main------------------------------
 int main( int argc, char *argv[] )
@@ -87,8 +85,6 @@ int main( int argc, char *argv[] )
     tv.tv_sec = timeout_in_seconds;
     tv.tv_usec = 0;
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-    // int rcv_buff = 40000;
-    // setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcv_buff, sizeof rcv_buff);
 
     // properly format request, send it, and receive answer
     worker_func(sockfd, statecode, opcode, serv_addr, addr_len);
@@ -162,30 +158,4 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr
         free(buffer);
         printf("\n");          
     }
-}
-
-
-
-// ------------------------------proccess_gif------------------------------
-void process_gif(char statecode[2], int len, char* buffer, struct response *res) {
-
-    // create file name
-    char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
-    if (str == NULL) {
-        fprintf(stderr, "UDP Client: process_gif: memory allocation failed\n");
-        return;
-    }
-    strcpy(str, statecode);
-    strcat(str, ".gif");
-
-    FILE *gifp = fopen(str, "w");
-    if (gifp == NULL) {
-        fprintf(stderr, "UDP Client: process_gif: failed to open %s\n", str);
-        return;
-    }
-    fwrite( buffer, len, 1, gifp);
-
-    fclose(gifp);
-
-    free(str); // Don't forget to free dynamically allocated memory
 }
