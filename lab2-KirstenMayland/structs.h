@@ -8,23 +8,33 @@
 #define LOWEST_OPCODE   1
 
 struct request {
-     uint8_t version;
-     uint8_t  opcode;
+     uint8_t   version;
+     uint8_t   opcode;
      char statecode[2];
 } __attribute__((packed));
 
 struct response {
-     uint8_t version;
-     uint8_t  status;
-     uint32_t len;
+     uint8_t   version;
+     uint8_t   status;
+     uint32_t  len;
 } __attribute__((packed));
 
-/* 
- *  Without "packed" the compiler will insert 
- *   padding into the struct. Remove it and 
- *   see what happens; printf( "%p %p\n", &req.pow, &req.num )
- *   will show you what the pointer values are.
- */    
+struct request2 {
+     uint8_t   version;
+     uint8_t   num_queries;
+} __attribute__((packed));
+
+struct response2 {
+     uint8_t   version;
+     uint8_t   status;
+     uint8_t   num_queries;
+     uint8_t   reserved;
+} __attribute__((packed));
+
+struct query2 {
+     uint8_t   opcode;
+     char statecode[2];
+} __attribute__((packed));
 
 struct state {
      char* name;

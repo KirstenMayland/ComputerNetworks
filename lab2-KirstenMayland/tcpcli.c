@@ -173,7 +173,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
             // if receiving gifs
             int header_size = sizeof(*res);
             if (opcode == 5 ) {
-                process_gif(statecode, len, buff + header_size, res);
+                process_gif(statecode, len, buff + header_size);
             }
             else {
                 fwrite( buff + header_size, len, 1, stdout );  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.

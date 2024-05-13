@@ -43,7 +43,17 @@ Task 2 of Exercise 2 involves creating a UDP client and server that talk to each
 Just like `tcpcli` and `tcpserv`, run `./udpcli <statecode> <opcode>` and `./udpserv <port to listen on>` on your computer and the pond respectively.
 
 ## Task 3
-In progress
+Task 3 of Exercise 2 involves creating a TCP and UDP client and server that talk to each other with a slightly different protocol (protocol Version 2) than the TCP/UDP client/servers above. They are used in roughly the same way as up above, but instead of simply querying the server with one request, you can make multiple requests. \
+\
+The usage for tcpcli2 and udpcli2 is as follows: `$ ./<tcpcli2/udpcli2> n*(<statecode> <opcode>)` where 'state code' is valid two letter state code (eg. pa, Wi, NH) and 'opcode' is an integer from 1 to 5 inclusive. For example, `$ ./tcpcli2 nh 1 pa 4` or `$ ./udpcli2 wi 3 pa 5 nh 2 `. \
+\
+For the servers, again type `./<tcpserv2/udpserv2> <port to listen on>` and ensure that the port number is above 1024 and corresponds to the `SERV_TCP_PORT`/`SERV_UDP_PORT` listed in either `tcpcli2.c`/`udpcli2.c`. Make sure `tcpcli2` is talking to `tcpserv2` and `udpcli2` is talking to `udpserv2` respectively. Again, I would recommend running the client on your home computer and the server on the pond. \
+\
+Personal TODOS:
+* figure out why ops 1-4 work but the statecodes still have more data attached
+* free malloced state structs
+* get tcpcli2/tcpserv2 to work for the gif
+* do it all over again with udp
 
 # Overview
 ### On memory:

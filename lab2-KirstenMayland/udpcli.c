@@ -129,7 +129,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr
     }
     n = recvfrom(sockfd, buffer, size_of_buffer, 0,(struct sockaddr *)&serv_addr, &addr_len);
     if (n < 0) {
-        perror("UDP CLient: Error receiving data, try TCP");
+        perror("UDP Client: Error receiving data, try TCP");
     }
 
     // process response
@@ -149,7 +149,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr
         if( len > 0 ){   
             // if receiving gifs
             if (opcode == 5 ) {
-                process_gif(statecode, len, buffer, res);
+                process_gif(statecode, len, buffer);
             }
             else {
                 fwrite( buffer, len, 1, stdout );  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.

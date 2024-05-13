@@ -11,13 +11,19 @@ OBJS_C = client.o
 # -------------------------- #
 
 
-all: tcpcli tcpserv udpcli udpserv
+all: tcpcli tcpserv udpcli udpserv tcpcli2 tcpserv2
 
 tcpcli: tcpcli.c $(OBJS_C)
 	$(CC) $(CFLAGS) -o $@ $< $(OBJS_C)
 
+tcpcli2: tcpcli2.c $(OBJS_C)
+	$(CC) $(CFLAGS) -o $@ $< $(OBJS_C)
+
 tcpserv: tcpserv.o $(OBJS_S)
 	$(CC) $(CFLAGS) -o tcpserv tcpserv.o $(OBJS_S)
+
+tcpserv2: tcpserv2.o $(OBJS_S)
+	$(CC) $(CFLAGS) -o tcpserv2 tcpserv2.o $(OBJS_S)
 
 udpcli: udpcli.c $(OBJS_C)
 	$(CC) $(CFLAGS) -o $@ $< $(OBJS_C)
@@ -26,4 +32,4 @@ udpserv: udpserv.o $(OBJS_S)
 	$(CC) $(CFLAGS) -o udpserv udpserv.o $(OBJS_S)
 
 clean:
-	rm tcpcli tcpserv udpcli udpserv *.gif *.o
+	rm tcpcli tcpserv udpcli udpserv tcpcli2 tcpserv2 *.gif *.o

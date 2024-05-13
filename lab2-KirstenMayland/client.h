@@ -17,4 +17,4 @@
 #include "structs.h"
 
 // ------------------------------process_gif------------------------------
-void process_gif(char statecode[2], int len, char* buffer, struct response *res);
+void process_gif(char statecode[2], int len, char* buffer);

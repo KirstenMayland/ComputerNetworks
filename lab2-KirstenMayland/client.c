@@ -5,7 +5,7 @@
 #include  "client.h"
 
 // ------------------------------process_gif------------------------------
-void process_gif(char statecode[2], int len, char* buffer, struct response *res) {
+void process_gif(char statecode[2], int len, char* buffer) {
 
     // create file name
     char *str = malloc(strlen(statecode) + strlen(".gif") + 1); // +1 for the null terminator
@@ -15,10 +15,7 @@ void process_gif(char statecode[2], int len, char* buffer, struct response *res)
     }
     strcpy(str, statecode);
     strcat(str, ".gif");
-
-    printf("filename = %s\n", str);
-    printf("length = %d\n", len);
-
+    
     FILE *gifp = fopen(str, "w");
     if (gifp == NULL) {
         fprintf(stderr, "process_gif: failed to open %s\n", str);
