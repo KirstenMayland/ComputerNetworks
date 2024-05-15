@@ -55,10 +55,10 @@ int main(int argc, char	*argv[])
     
     // Open a TCP socket (an Internet stream socket).
     if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        fprintf(stderr, "TCP Server: Can't open stream socket\n");
+        fprintf(stderr, "TCP Server 2: Can't open stream socket\n");
         exit(-1);
     } else {
-        printf("TCP Server: Socket sucessfully created..\n");
+        printf("TCP Server 2: Socket sucessfully created..\n");
     }
     
     int optval = 1;
@@ -71,10 +71,10 @@ int main(int argc, char	*argv[])
     serv_addr.sin_port        = htons(serv_tcp_port);
     
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        fprintf(stderr, "TCP Server: can't bind local address\n");
+        fprintf(stderr, "TCP Server 2: can't bind local address\n");
         exit(-1);
     } else {
-        printf("TCP Server: Successfully bound local address..\n");
+        printf("TCP Server 2: Successfully bound local address..\n");
     }
     
     listen(sockfd, 5);
@@ -83,7 +83,7 @@ int main(int argc, char	*argv[])
     char keys[NUM_STATES][MAXLINE];
     struct state* values[NUM_STATES];
     create_database(TEXT_DATABASE, keys, values, &size);
-    printf("TCP Server: Created database...\n");
+    printf("TCP Server 2: Created database...\n");
     
     for ( ; ; ) {
         // Wait for a connection from a client process.
@@ -92,14 +92,14 @@ int main(int argc, char	*argv[])
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
         if (newsockfd < 0)
-            err_dump("TCP Server: accept error", values, size);
+            err_dump("TCP Server 2: accept error", values, size);
             
         if ( (childpid = fork()) < 0)
-            err_dump("TCP Server: fork error", values, size);
+            err_dump("TCP Server 2: fork error", values, size);
         
         if (childpid == 0) {  // child process
             close(sockfd);  // close original socket
-            printf("TCP Server: In child, calling process_request...\n");
+            printf("TCP Server 2: In child, calling process_request...\n");
             process_request(newsockfd, keys, values, size);  // process the request, loops until peer closes connection
             exit(0);
         }
@@ -156,7 +156,7 @@ void process_request(int sockfd, char (*keys)[MAXLINE], struct state** values, i
         database_indicies[i] = index; // if valid
     }
 
-    printf("TCP Server: All queries are valid...\n");
+    printf("TCP Server 2: All queries are valid...\n");
 
     // send header response back -----------------
     send_header_v2(sockfd, req, res, values, size, 1, 0);
@@ -204,7 +204,7 @@ void send_string_data(int sockfd, char* statecode, int opcode, struct state** va
     length = htonl(string_len);
     n = write(sockfd, (void*) &length, sz);
     if ( n < sz ){
-        err_dump("TCP Server: Error sending response", values, size);
+        err_dump("TCP Server 2: Error sending response", values, size);
         return;
     }
 
@@ -240,7 +240,7 @@ void send_gif(int sockfd, char* statecode, struct state** values, int size) {
     length = htonl(len);
     n = write(sockfd, &length, sz);
     if ( n < sz ){
-        err_dump("TCP Server: Error sending response", values, size);
+        err_dump("TCP Server 2: Error sending response", values, size);
         return;
     }
 
@@ -269,7 +269,7 @@ void send_error(int sockfd, char* error_msg, struct state** values, int size) {
     length = htonl(len);
     n = write(sockfd, (void*) &length, sz);
     if ( n < sz ){
-        err_dump("TCP Server: Error sending response", values, size);
+        err_dump("TCP Server 2: Error sending response", values, size);
         return;
     }
 

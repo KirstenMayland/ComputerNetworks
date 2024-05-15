@@ -44,13 +44,28 @@ int main( int argc, char *argv[] )
     int num_queries = (argc-1)/2;
     struct query2 queries[num_queries]; 
     for (int i = 0 ; i < num_queries; i++){
+        int n = (i*2)+1;
+
+        // check opcode
+        if ( atoi(argv[n+1]) > HIGHEST_OPCODE || atoi(argv[n+1]) < LOWEST_OPCODE) {
+            perror("TCP Client 2: Query has invalid opcode in it");
+            // TODO:free queries so far
+            exit(1);    
+        }
+
+        // check statecode format
+        if ( strlen(argv[n]) != 2 || ! isalpha(argv[n][0]) || ! isalpha(argv[n][0]) )  {
+            perror("TCP Client 2: Query has invalid statecode in it");
+            // TODO:free queries so far
+            exit(1); 
+        }
+
         // malloc new query2
         struct query2* query = malloc(sizeof(struct query2)); // Allocate memory //TODO: remember to free
+        
         // set opcode and statecode
-        int n = (i*2)+1;
         query->opcode = atoi(argv[n+1]);
-        query->statecode[0] = argv[n][0];
-        query->statecode[1] = argv[n][1];
+        strcpy(query->statecode, argv[n]);
 
         // add to query2 array
         queries[i] = *query;
@@ -99,8 +114,9 @@ void worker_func( int sockfd, int num_queries, struct query2* queries )
 
     // send request to server -----------
     // header
-    n = write( sockfd, (void*) &req, sizeof(req) );
-    if( n < sizeof(req) ){
+    int req_size = sizeof(req);
+    n = write( sockfd, (void*) &req, req_size );
+    if( n < req_size ){
         perror( "TCP Client 2: Error sending request" );
         exit(1);
     }
@@ -159,14 +175,31 @@ void worker_func( int sockfd, int num_queries, struct query2* queries )
             // read in next len bytes
             int len = ntohl(length); 
             char data[len];
-            n = read(sockfd, data, len);
-            if (n < len) {
-                perror( "TCP Client 2: header message truncated" );
-                exit(1);
+            int bytes_read = 0;
+            printf("length of data = %d\n", len);
+            for ( ; ; ) { // TODO: should change to reading one byte at at time in bc otherwise it's fucking with it
+                n = read(sockfd, data + bytes_read, len - bytes_read);
+                bytes_read += n;
+                printf("length of data read = %d\n", bytes_read);
+                if (n < 0) {
+                    perror( "TCP Client 2: read data error" );
+                }
+                else if (n == 0) {
+                    break;
+                }
             }
+
+            // n = read(sockfd, data, len); // TODO: for gif should read in bytes in loop until it hits the length
+            // printf("length of data = %d\n", len);
+            // printf("length of data read = %d\n", n);
+            // if (n < len) {
+            //     perror( "TCP Client 2: data message truncated" );
+            //     exit(1);
+            // }
             // process resulting data
             if( len > 0 ){   
                 if (queries[i].opcode == 5 ) {
+                    printf("processing gif....\n");
                     process_gif(queries[i].statecode, len, data);
                 }
                 else {
