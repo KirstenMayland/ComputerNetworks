@@ -49,13 +49,11 @@ The usage for `tcpcli2` and `udpcli2` is as follows: `$ ./<tcpcli2/udpcli2> n*(<
 \
 For the servers, again type `./<tcpserv2/udpserv2> <port to listen on>` and ensure that the port number is above 1024 and corresponds to the `SERV_TCP_PORT`/`SERV_UDP_PORT` listed in either `tcpcli2.c`/`udpcli2.c`. Make sure `tcpcli2` is talking to `tcpserv2` and `udpcli2` is talking to `udpserv2` respectively. Again, I would recommend running the client on your home computer and the server on the pond. \
 \
-Currently TCPcli2/serv2 work for any queries without gifs
-\
 Personal TODOS:
 * free malloced state structs in version 2
-* figure out why gif names are concatonating
-* update udp v1 to stop gifs on server side
-* do version 2 all over again with udp
+* figure out why gif names are concatonating in tcp
+* configure gifs on the upd2 client side
+* condense code into header files instead of copy and pasted around
 
 # Overview
 ### On memory:

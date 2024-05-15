@@ -4,5 +4,7 @@ udpcli
 udpserv
 tcpcli2
 tcpserv2
+udpcli2
+udpserv2
 *.gif
 *.o

@@ -34,6 +34,7 @@ If the answer would not fit, return a status code of 254, and the error string o
 void err_dump(char *msg, struct state** values, int size);
 void process_request(int sockfd, char (*keys)[MAXLINE], struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
 char* get_gif_filename( char* statecode, struct state** values, int size );
+void send_header_v1(int sockfd, struct request* req, struct response res, struct state** values, int size, int status, const struct sockaddr *cli_addr, socklen_t addr_len);
 void send_gif(int sockfd, struct request* req, struct response res, struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
 void send_string_data(int sockfd, struct request* req, struct response res, struct state** values, int i, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
 void send_error(int sockfd, struct request* req, struct response res, char* error_msg, struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
@@ -114,11 +115,9 @@ void process_request(int sockfd, char (*keys)[MAXLINE], struct state** values, i
     // printf("Request: version = %d; opcode = %d; statecode = %s\n", req->version, req->opcode, req->statecode);
 
     // send response back -----------------
-    res.version = req->version;
-    res.status = 1;
-
     int i = check_valid_query(sockfd, req, res, keys, values, size, cli_addr, addr_len);
     if ( i != -1 ) {
+        printf("UDP Server: valid query...\n");
         if (req->opcode == 5) {
             send_gif(sockfd, req, res, values, size, cli_addr, addr_len);
         }
@@ -131,39 +130,52 @@ void process_request(int sockfd, char (*keys)[MAXLINE], struct state** values, i
         printf("UDP Server: Error response sent...\n");
     }
 }
+// ------------------------------send_header_v1------------------------------
+void send_header_v1(int sockfd, struct request* req, struct response res, struct state** values, int size, int status, const struct sockaddr *cli_addr, socklen_t addr_len) {
+    int n, sz;
+    res.version = req->version;
+    res.status = status;
+
+    sz = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
+    n = sendto(sockfd, (void*) &res, sz, 0, cli_addr, addr_len);
+    if ( n != sz ){
+        err_dump("UDP Server: Error sending response", values, size);
+        return;
+    }
+}
 
 // ------------------------------send_string_data------------------------------
 void send_string_data(int sockfd, struct request* req, struct response res, struct state** values, int i, int size, struct sockaddr_in	cli_addr, socklen_t addr_len) {
-    int n, len, sz;
+    int n, len;
 
     // get string and its length
     char* string = query_database(req->statecode, req->opcode, &res, i, values);
     len = strlen(string);
     res.len = htonl(len);
 
-    // send header
-    sz = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
-    n = sendto(sockfd, (void*) &res, sz, 0, (const struct sockaddr *)&cli_addr, addr_len);
-    if ( n != sz ){
-        err_dump("UDP Server: Error sending response", values, size);
-        return;
+    if (len > MAXLINE) { // if can't fit inside a single UDP packet
+        send_error(sockfd, req, res, "packet to big, try TCP", values, size, cli_addr, addr_len);
     }
-    // send data
-    n = sendto(sockfd, (void*) string, len, 0, (const struct sockaddr *)&cli_addr, addr_len);
-    if ( n != len ){
-        err_dump("UDP Server: Error sending response", values, size);
-        return;
+    else {
+        // send header
+        send_header_v1(sockfd, req, res, values, size, 1, (const struct sockaddr *)&cli_addr, addr_len);
+
+        // send data
+        n = sendto(sockfd, (void*) string, len, 0, (const struct sockaddr *)&cli_addr, addr_len);
+        if ( n != len ){
+            err_dump("UDP Server: Error sending response", values, size);
+            return;
+        }
     }
 }
 
 // ------------------------------send_gif------------------------------
 void send_gif(int sockfd, struct request* req, struct response res, struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len) {
-    int n, sz;
+    int n;
     long length;
 
     // first get filename and open file in rb
     char * file = get_gif_filename(req->statecode, values, size);
-    printf("reading from file: %s\n", file);
     FILE *gifp = fopen(file, "rb");
     if (gifp == NULL) {
         res.status = -1;
@@ -176,28 +188,26 @@ void send_gif(int sockfd, struct request* req, struct response res, struct state
     fseek(gifp, 0L, SEEK_END);
     length = ftell(gifp);
     rewind(gifp);
-
-    // add length to header and send header
     res.len = htonl(length);
-    sz = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
-    n = sendto(sockfd, (void*) &res, sz, 0, (const struct sockaddr *)&cli_addr, addr_len);
-    if ( n != sz ){
-        err_dump("UDP Server: Error sending response", values, size);
-        return;
-    }
 
-    // Read and send the GIF file in chunks
-    ssize_t bytes_read;
-    char* buffer = (char *)malloc(length); // Allocate memory for buffer
-    if (buffer == NULL) {
-        perror( "UDP Client: Buffer memory allocation failed" );
-        exit(1);
+    if (length > MAXLINE) { // if can't fit inside a single UDP packet
+        send_error(sockfd, req, res, "packet to big, try TCP", values, size, cli_addr, addr_len);
     }
+    else {
+        send_header_v1(sockfd, req, res, values, size, 1, (const struct sockaddr *)&cli_addr, addr_len);
+        // Read and send the GIF file in chunks
+        ssize_t bytes_read;
+        char* buffer = (char *)malloc(length); // Allocate memory for buffer
+        if (buffer == NULL) {
+            perror( "UDP Client: Buffer memory allocation failed" );
+            exit(1);
+        }
 
-    bytes_read = fread(buffer, 1, length, gifp);
-    n = sendto(sockfd, (void*) buffer, bytes_read, 0, (const struct sockaddr *)&cli_addr, addr_len);
-    if ( n < bytes_read) {
-        err_dump("Error sending GIF file", values, size);
+        bytes_read = fread(buffer, 1, length, gifp);
+        n = sendto(sockfd, (void*) buffer, bytes_read, 0, (const struct sockaddr *)&cli_addr, addr_len);
+        if ( n < bytes_read) {
+            err_dump("Error sending GIF file", values, size);
+        }
     }
 
     fclose(gifp);
@@ -206,21 +216,15 @@ void send_gif(int sockfd, struct request* req, struct response res, struct state
 
 // ------------------------------send_error------------------------------
 void send_error(int sockfd, struct request* req, struct response res, char* error_msg, struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len) {
-    int n, len, sz;
-
-    res.status = 255;
+    int n, len;
 
     // get string and its length
     len = strlen(error_msg);
     res.len = htonl(len);
 
     // send header
-    sz = sizeof(res.version) + sizeof(res.status) + sizeof(res.len);  //  1 + 1 + 4
-    n = sendto(sockfd, (void*) &res, sz, 0, (const struct sockaddr *)&cli_addr, addr_len);
-    if ( n != sz ){
-        err_dump("UDP Server: Error sending response", values, size);
-        return;
-    }
+    send_header_v1(sockfd, req, res, values, size, 255, (const struct sockaddr *)&cli_addr, addr_len);
+    
     // send data
     n = sendto(sockfd, (void*) error_msg, len, 0, (const struct sockaddr *)&cli_addr, addr_len);
     if ( n != len ){

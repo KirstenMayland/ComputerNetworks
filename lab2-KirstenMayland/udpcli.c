@@ -74,11 +74,11 @@ int main( int argc, char *argv[] )
     
     // Open a UDP socket (an Internet stream socket).
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){  /* AF_INET is 2, SOCK_STREAM is 1 */
-        perror("UDP client: Can't open stream socket");
+        perror("UDP Client: Can't open stream socket");
         exit(1);
     }
     else {
-        printf("UDP client: Socket sucessfully created..\n");
+        printf("UDP Client: Socket sucessfully created..\n");
     }
 
     struct timeval tv;
@@ -108,7 +108,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr
     // send request to server
     n = sendto(sockfd, (void*) &req, sizeof(req), 0, (struct sockaddr *)&serv_addr, addr_len);
     if( n < sizeof(req) ){
-        perror("UDP CLient: Error sending request");
+        perror("UDP Client: Error sending request");
         exit(1);
     }
 
@@ -116,7 +116,7 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode, struct sockaddr
     char buff[MAXLINE];
     n = recvfrom(sockfd, buff, sizeof(*res), 0,(struct sockaddr *)&serv_addr, &addr_len);
     if (n < 0) {
-        perror("UDP CLient: Error receiving header, try TCP");
+        perror("UDP Client: Error receiving header, try TCP");
     }
     res = (struct response *)buff;
 

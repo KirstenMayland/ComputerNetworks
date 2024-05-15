@@ -11,6 +11,7 @@
 #include  <stdio.h>
 #include  <sys/types.h>
 #include  <sys/socket.h>
+#include  <sys/time.h>
 #include  <netinet/in.h>
 #include  <arpa/inet.h>
 #include  <stdio.h>
@@ -18,22 +19,25 @@
 #include  <strings.h> // bzero
 #include  <stdlib.h>  // exit
 #include  <unistd.h>  // close
-#include <stdint.h>   // uint8_t
-#include <ctype.h>
-#include "client.h"
+#include  <stdint.h>   // uint8_t
+#include  <ctype.h>
+#include  "client.h"
 
-#define SERV_TCP_PORT   8901 // thepond
+#define SERV_UDP_PORT   8901 // thepond
 #define SERV_HOST_ADDR  "129.170.212.8" // thepond
 
 int version = 2;
+int timeout_in_seconds = 1;
+
 // local functions
-void worker_func( int sockfd, int num_queries, struct query2* queries );
+void worker_func( int sockfd, int num_queries, struct query2* queries, struct sockaddr_in serv_addr, socklen_t addr_len );
 
 // ------------------------------main------------------------------
 int main( int argc, char *argv[] )
 {
     int sockfd;
     struct sockaddr_in serv_addr;
+    socklen_t addr_len = sizeof(struct sockaddr_in);
 
     // check proper input format (general)
     if( (argc % 2) != 1 ){
@@ -75,35 +79,31 @@ int main( int argc, char *argv[] )
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;  /* "Internet", meaning IPv4 */
     serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR); /* string to 4-byte IPv4 address */
-    serv_addr.sin_port        = htons(SERV_TCP_PORT);      /* must be network-ordered! */
+    serv_addr.sin_port        = htons(SERV_UDP_PORT);      /* must be network-ordered! */
     
-    // Open a TCP socket (an Internet stream socket).
-    if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){  /* AF_INET is 2, SOCK_STREAM is 1 */
-        perror("TCP Client 2: Can't open stream socket");
+    // Open a UDP socket (an Internet stream socket).
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){  /* AF_INET is 2, SOCK_STREAM is 1 */
+        perror("UDP Client 2: Can't open stream socket");
         exit(1);
     }
     else {
-        printf("TCP Client 2: Socket sucessfully created..\n");
+        printf("UDP Client 2: Socket sucessfully created..\n");
     }
 
-    // Connect to the server
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0){
-        perror("TCP Client 2: Can't connect to server");
-        exit(1);
-    }
-    else {
-        printf("TCP Client 2: Connected to server..\n");
-    }
+    struct timeval tv;
+    tv.tv_sec = timeout_in_seconds;
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     // properly format request, send it, and receive answer
-    worker_func(sockfd, num_queries, queries);
+    worker_func(sockfd, num_queries, queries, serv_addr, addr_len);
     
     close(sockfd);
     return 0;
 }
 
 // ------------------------------worker_func------------------------------
-void worker_func( int sockfd, int num_queries, struct query2* queries )
+void worker_func( int sockfd, int num_queries, struct query2* queries, struct sockaddr_in serv_addr, socklen_t addr_len )
 {
     int n, i;
     struct request2 req;
@@ -115,32 +115,31 @@ void worker_func( int sockfd, int num_queries, struct query2* queries )
     // send request to server -----------
     // header
     int req_size = sizeof(req);
-    n = write( sockfd, (void*) &req, req_size );
+    n = sendto(sockfd, (void*) &req, req_size, 0, (struct sockaddr *)&serv_addr, addr_len);
     if( n < req_size ){
-        perror( "TCP Client 2: Error sending request header" );
+        perror("UDP Client 2: Error sending request header");
         exit(1);
     }
     // data
-    for (i = 0 ; i < num_queries; i++){
+        for (i = 0 ; i < num_queries; i++){
         struct query2 query = queries[i];
         int query_size = sizeof(query);
-        printf("query being sent: statecode = %s, opcode = %d\n", query.statecode, query.opcode);
 
-        n = write( sockfd, (void*) &query, query_size );
+        n = sendto(sockfd, (void*) &query, query_size, 0, (struct sockaddr *)&serv_addr, addr_len);
         if( n < query_size ){
-            perror( "TCP Client 2: Error sending request data" );
+            perror( "UDP Client 2: Error sending request data" );
             exit(1);
         }
     }
 
-    printf("TCP Client 2: Sent %d query request(s)..\n", num_queries);
+    printf("UDP Client 2: Sent %d query request(s)..\n", num_queries);
 
     // receive header message from server -----------
     int res_size = sizeof(*res);
     char header_buff[res_size];
-    n = read(sockfd, header_buff, res_size);
+    n = recvfrom(sockfd, header_buff, res_size, 0,(struct sockaddr *)&serv_addr, &addr_len);
     if (n < res_size) {
-        perror( "TCP Client 2: header message truncated" );
+        perror( "UDP Client 2: header message truncated" );
         exit(1);
     }
     res = (struct response2 *)header_buff;
@@ -149,9 +148,9 @@ void worker_func( int sockfd, int num_queries, struct query2* queries )
     if( res->status != RESULT_STATUS_OK ){
         printf( "Something went wrong! This is what I received:\n" );
         char buff[MAXLINE];
-        n = read(sockfd, buff, MAXLINE);
+        n = recvfrom(sockfd, buff, MAXLINE, 0,(struct sockaddr *)&serv_addr, &addr_len);
         if (n < 0) {
-            perror( "TCP Client 2: header message truncated" );
+            perror( "UDP Client 2: header message truncated" );
             exit(1);
         }
         for (i = 0; i < n; i++) {           /* print packet */
@@ -161,28 +160,33 @@ void worker_func( int sockfd, int num_queries, struct query2* queries )
         exit(1);
     }
     // receive data message from server -----------
-    else { 
+    else {
         for (i = 0 ; i < num_queries; i++){
-            printf("TCP Client 2: Processing query %d...\n", i+1);
+            printf("UDP Client 2: Processing query %d...\n", i+1);
             // read in first 4 bytes to get len length
             int sz = sizeof(uint32_t);
             long length;
-            n = read(sockfd, &length, sz);
+            n = recvfrom(sockfd, &length, sz, 0, (struct sockaddr *)&serv_addr, &addr_len);
             if (n < sz) {
-                perror( "TCP Client 2: header message truncated" );
+                perror( "UDP Client 2: header message truncated" );
                 exit(1);
             }
+
             // read in next len bytes
             int len = ntohl(length); 
             char data[len];
             int bytes_read = 0;
             for ( ; ; ) {
-                n = read(sockfd, data + bytes_read, len - bytes_read);
+                n = recvfrom(sockfd, data + bytes_read, len - bytes_read, 0,(struct sockaddr *)&serv_addr, &addr_len);
                 bytes_read += n;
                 if (n < 0) {
-                    perror( "TCP Client 2: read data error" );
+                    perror( "UDP Client 2: read data error" );
+                    exit(1);
                 }
-                else if (n == 0) {
+                else if (n == 0) { // end of data
+                    break;
+                }
+                else if (bytes_read == len) { // end of data
                     break;
                 }
             }

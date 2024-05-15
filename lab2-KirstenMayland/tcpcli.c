@@ -38,11 +38,11 @@ The protocol: The following opcodes are implemented:
 #include <ctype.h>
 #include "client.h"
 
-// #define SERV_TCP_PORT   8901 // thepond
-// #define SERV_HOST_ADDR  "129.170.212.8" // thepond
+#define SERV_TCP_PORT   8901 // thepond
+#define SERV_HOST_ADDR  "129.170.212.8" // thepond
 
-#define SERV_TCP_PORT   5050    // packetbender.com
-#define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
+// #define SERV_TCP_PORT   5050    // packetbender.com
+// #define SERV_HOST_ADDR  "71.19.146.5"   // packetbender.com
 
 #define VERSION         1
 
@@ -153,7 +153,6 @@ void worker_func( int sockfd, char statecode[2], uint8_t opcode )
         }
     }
     res = (struct response *)buff;
-    printf("total_bytes_read = %d\n", total_bytes_read);
 
     // process response
     // check if valid result
