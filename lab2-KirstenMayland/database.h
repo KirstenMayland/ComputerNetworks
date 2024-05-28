@@ -40,3 +40,9 @@ void printMap(char (*keys)[MAXLINE], struct state** values, int size);
   
 // ------------------------------freeMap------------------------------  
 void freeMap(struct state** values, int size);
+
+// ------------------------------query_database------------------------------  
+char* query_database(char* statecode, int opcode, int index, struct state** values);
+
+// ------------------------------get_gif_filename------------------------------
+char* get_gif_filename( char* statecode, struct state** values, int size );

@@ -87,3 +87,37 @@ void freeMap(struct state** values, int size) {
         free(values[i]);
     } 
 }
+
+// ------------------------------query_database------------------------------  
+char* query_database(char* statecode, int opcode, int index, struct state** values) {
+
+    if (opcode == 1) {
+        return values[index]->name;
+    } else if (opcode == 2) {
+        return values[index]->capital;
+    } else if (opcode == 3) {
+        return values[index]->date;
+    } else if (opcode == 4) {
+        return values[index]->motto;  
+    }
+    return "ERROR";
+}
+
+// ------------------------------get_gif_filename------------------------------
+char* get_gif_filename( char* statecode, struct state** values, int size ) {
+    // create file name
+    char sc[2];
+    sc[0] = tolower(statecode[0]);  // convert statecode to lowercase for query purposes
+    sc[1] = tolower(statecode[1]);
+    char *file = malloc(strlen(FLAGS_LOC) + strlen(sc) + strlen(".gif") + 1); // +1 for the null terminator
+    if (file == NULL) {
+        perror("get_gif_filename: memory allocation failed");
+        freeMap(values, size);
+        exit(1);
+    }
+    strcpy(file, FLAGS_LOC);
+    strcat(file, sc);
+    strcat(file, ".gif");
+
+    return file;
+}

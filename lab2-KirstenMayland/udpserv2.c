@@ -39,7 +39,6 @@ void send_gif(int sockfd, char* statecode, struct request2* req, struct response
 void send_string_data(int sockfd, char* statecode, int opcode, struct state** values, int index, int size, struct sockaddr_in cli_addr, socklen_t addr_len);
 void send_error(int sockfd, char* error_msg, struct state** values, int size, struct sockaddr_in cli_addr, socklen_t addr_len);
 int check_valid_query(int sockfd, struct request2* req, struct response2 res, struct query2 query, char (*keys)[MAXLINE], struct state** values, int size, struct sockaddr_in cli_addr, socklen_t addr_len);
-char* query_database(char* statecode, int opcode, int index, struct state** values);
 
 // ------------------------------main------------------------------
 int main(int argc, char	*argv[])
@@ -286,39 +285,6 @@ void send_error(int sockfd, char* error_msg, struct state** values, int size, st
         err_dump("UDP Server 2: Error sending response", values, size);
         return;
     }
-}
-
-
-// ------------------------------query_database------------------------------
-char* query_database(char* statecode, int opcode, int index, struct state** values) {
-
-    if (opcode == 1) {
-        return values[index]->name;
-    } else if (opcode == 2) {
-        return values[index]->capital;
-    } else if (opcode == 3) {
-        return values[index]->date;
-    } else if (opcode == 4) {
-        return values[index]->motto;  
-    }
-    return "ERROR";
-}
-
-// ------------------------------get_gif_filename------------------------------
-char* get_gif_filename( char* statecode, struct state** values, int size ) {
-    // create file name
-    char sc[2];
-    sc[0] = tolower(statecode[0]);  // convert statecode to lowercase for query purposes
-    sc[1] = tolower(statecode[1]);
-    char *file = malloc(strlen(FLAGS_LOC) + strlen(sc) + strlen(".gif") + 1); // +1 for the null terminator
-    if (file == NULL) {
-        err_dump("UDP Server 2: get_gif: memory allocation failed", values, size);
-    }
-    strcpy(file, FLAGS_LOC);
-    strcat(file, sc);
-    strcat(file, ".gif");
-
-    return file;
 }
 
 // ------------------------------check_valid_query------------------------------

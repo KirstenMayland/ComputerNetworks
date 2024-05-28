@@ -194,8 +194,11 @@ void worker_func( int sockfd, int num_queries, struct query2* queries, struct so
             // process resulting data
             if( len > 0 ){   
                 if (queries[i].opcode == 5 ) {
-                    printf("processing gif....\n");
-                    process_gif(queries[i].statecode, len, data);
+                    if (len > MAXLINE) {  // if sent as normal
+                        process_gif(queries[i].statecode, len, data);
+                    } else { // if unable to be sent in single UDP packet
+                        fwrite(data, len, 1, stdout);
+                    }
                 }
                 else {
                     fwrite(data, len, 1, stdout);  // number of bytes of offset, (unit8) + (uint8) + (uint32) , i.e., 1 + 1 + 4 = 6.

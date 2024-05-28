@@ -39,7 +39,6 @@ void send_gif(int sockfd, struct request* req, struct response res, struct state
 void send_string_data(int sockfd, struct request* req, struct response res, struct state** values, int i, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
 void send_error(int sockfd, struct request* req, struct response res, char* error_msg, struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
 int check_valid_query(int sockfd, struct request* req, struct response res, char (*keys)[MAXLINE], struct state** values, int size, struct sockaddr_in	cli_addr, socklen_t addr_len);
-char* query_database(char* statecode, int opcode, struct response *res, int i, struct state** values);
 
 // ------------------------------main------------------------------
 int main(int argc, char	*argv[])
@@ -149,7 +148,7 @@ void send_string_data(int sockfd, struct request* req, struct response res, stru
     int n, len;
 
     // get string and its length
-    char* string = query_database(req->statecode, req->opcode, &res, i, values);
+    char* string = query_database(req->statecode, req->opcode, i, values);
     len = strlen(string);
     res.len = htonl(len);
 
@@ -231,39 +230,6 @@ void send_error(int sockfd, struct request* req, struct response res, char* erro
         err_dump("UDP Server: Error sending response", values, size);
         return;
     }
-}
-
-
-// ------------------------------query_database------------------------------
-char* query_database(char* statecode, int opcode, struct response *res, int i, struct state** values) {
-
-    if (opcode == 1) {
-        return values[i]->name;
-    } else if (opcode == 2) {
-        return values[i]->capital;
-    } else if (opcode == 3) {
-        return values[i]->date;
-    } else if (opcode == 4) {
-        return values[i]->motto;  
-    }
-    return "ERROR";
-}
-
-// ------------------------------get_gif_filename------------------------------
-char* get_gif_filename( char* statecode, struct state** values, int size ) {
-    // create file name
-    char sc[2];
-    sc[0] = tolower(statecode[0]);  // convert statecode to lowercase for query purposes
-    sc[1] = tolower(statecode[1]);
-    char *file = malloc(strlen(FLAGS_LOC) + strlen(sc) + strlen(".gif") + 1); // +1 for the null terminator
-    if (file == NULL) {
-        err_dump("UDP Server: get_gif: memory allocation failed", values, size);
-    }
-    strcpy(file, FLAGS_LOC);
-    strcat(file, sc);
-    strcat(file, ".gif");
-
-    return file;
 }
 
 // ------------------------------check_valid_query------------------------------
