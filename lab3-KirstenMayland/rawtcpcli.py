@@ -11,7 +11,7 @@ import sys
 src_ip = '10.132.55.174'  # 172.21.76.197
 dest_ip = '129.170.212.8'  # packetbender.com
 src_port = 12345
-dest_port = 8080
+dest_port = 8901
 
 # ------------------------------open raw socket------------------------------
 try:
@@ -20,6 +20,7 @@ try:
 except socket.error as e:
     print(f"Socket creation failed: {e}")
     sys.exit(1)
+print("Opened raw socket...")
 
 # ------------------------------send SYN packet------------------------------
 try:
@@ -33,6 +34,7 @@ except Exception as e:
     print(f"Failed to send SYN packet: {e}")
     sock.close()
     sys.exit(1)
+print("Sent SYN packet to port " + str(dest_port) + "; IP " + str(dest_ip) + "...")
 
 # ------------------------------receive SYN-ACK packet------------------------------
 try:

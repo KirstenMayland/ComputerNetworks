@@ -8,16 +8,21 @@ from common import *
 
 
 # Configuration
-src_ip = '192.168.1.100'  # Replace with your source IP
-dest_ip = '93.184.216.34'  # Example IP (example.com)
+src_ip = '10.132.55.174'
+dest_ip =  '129.170.212.8'  # thepond/packetbender
 src_port = 12345
-dest_port = 80
+dest_port = 8901
 file_contents = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!"  # Example response
 
 # ------------------------------packet_callback------------------------------
 # Sniff TCP packets containing HTTP requests
+i = 0
 def packet_callback(packet):
+    global i
+    i += 1
+    print(f"Checking incoming packet {i}...")
     if packet.haslayer(TCP) and packet[TCP].dport == dest_port:
+        print(f"Processing incoming packet {i}...")
         # Extract necessary details from the incoming packet
         ip = packet[IP]
         tcp = packet[TCP]
@@ -39,4 +44,5 @@ def packet_callback(packet):
         send(response_packet, verbose=0)
 
 # Start sniffing
+print("Starting to sniff...")
 sniff(filter=f"tcp and dst port {dest_port}", prn=packet_callback, store=0)

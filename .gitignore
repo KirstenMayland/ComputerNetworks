@@ -8,3 +8,4 @@ udpcli2
 udpserv2
 *.gif
 *.o
+__pycache__
