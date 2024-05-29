@@ -14,6 +14,15 @@ src_port = 12345
 dest_port = 8901
 file_contents = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!"  # Example response
 
+# ------------------------------open raw socket------------------------------
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+except socket.error as e:
+    print(f"Socket creation failed: {e}")
+    sys.exit(1)
+print("Opened raw socket...")
+
 # ------------------------------packet_callback------------------------------
 # Sniff TCP packets containing HTTP requests
 i = 0
@@ -33,7 +42,8 @@ def packet_callback(packet):
         # Send SYN-ACK
         flags = 0x12  # SYN-ACK
         syn_ack_packet = create_packet(dest_ip, ip.src, dest_port, tcp.sport, ack_seq, seq + 1, flags, socket.htons(5840))
-        send(syn_ack_packet, verbose=0)
+        #send(syn_ack_packet, verbose=0)
+        sock.sendto(syn_ack_packet, (src_ip, 0))
 
         # Wait for ACK
         time.sleep(0.5)
@@ -41,8 +51,12 @@ def packet_callback(packet):
         # Send HTTP response
         flags = 0x18  # PSH-ACK
         response_packet = create_packet(dest_ip, ip.src, dest_port, tcp.sport, ack_seq, seq + 1, flags, socket.htons(5840), file_contents.encode())
-        send(response_packet, verbose=0)
+        sock.sendto(response_packet, (src_ip, 0))
+        # send(response_packet, verbose=0)
+        print(f"Sent back HTTP response to packet {i}...")
 
+
+# ------------------------------sniff tcp stream------------------------------
 # Start sniffing
 print("Starting to sniff...")
 sniff(filter=f"tcp and dst port {dest_port}", prn=packet_callback, store=0)
