@@ -3,15 +3,8 @@
 # Spring 2024
 # Credit: Framework provided by ChatGPT
 
-from scapy.all import *
 from common import *
 
-
-# Configuration
-src_ip = '10.132.55.174'
-dest_ip =  '129.170.212.8'  # thepond/packetbender
-src_port = 12345
-dest_port = 8901
 file_contents = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!"  # Example response
 
 # ------------------------------open raw socket------------------------------
@@ -23,40 +16,61 @@ except socket.error as e:
     sys.exit(1)
 print("Opened raw socket...")
 
+# ------------------------------send SYN-ACK packet------------------------------
+def send_syn_ack(server_seq, client_seq):
+    # NOTE: idk why every time I send a SYN-ACK, it turns into a RST-ACK; maybe it's bc I'm home and working through the VPN? idk
+    syn_ack_packet = IP(src=SERV_IP, dst=CLI_IP) / TCP(sport=SERV_PORT, dport=CLI_PORT, flags="SA", seq=server_seq, ack=client_seq + 1)
+    send(syn_ack_packet, verbose=False)
+    print(f"Sent SYN-ACK packet with seq={server_seq}, ack={client_seq + 1} to {CLI_IP}:{CLI_PORT}")
+
+# ------------------------------process ACK------------------------------
+def process_ack(packet):
+    print("checking if ACK")
+    if packet.haslayer(TCP) and packet[TCP].flags == "A" and packet[TCP].dport == SERV_PORT:
+        print("ACK received")
+        return True
+    return False
+
 # ------------------------------packet_callback------------------------------
-# Sniff TCP packets containing HTTP requests
-i = 0
 def packet_callback(packet):
-    global i
-    i += 1
-    print(f"Checking incoming packet {i}...")
-    if packet.haslayer(TCP) and packet[TCP].dport == dest_port:
-        print(f"Processing incoming packet {i}...")
+    if packet.haslayer(TCP) and packet[TCP].flags == "S":
         # Extract necessary details from the incoming packet
+        print(packet.summary())  # Verbose output for captured packets
         ip = packet[IP]
         tcp = packet[TCP]
         seq = tcp.seq
         ack_seq = tcp.ack
 
-        # Complete the three-way handshake
-        # Send SYN-ACK
-        flags = 0x12  # SYN-ACK
-        syn_ack_packet = create_packet(dest_ip, ip.src, dest_port, tcp.sport, ack_seq, seq + 1, flags, socket.htons(5840))
-        #send(syn_ack_packet, verbose=0)
-        sock.sendto(syn_ack_packet, (src_ip, 0))
+        # send SYN-ACK
+        serv_seq = random.randint(1000, 50000)  # Initial sequence number
+        send_syn_ack(serv_seq, seq)
 
-        # Wait for ACK
-        time.sleep(0.5)
+        # wait for ACK
+        ack_received = False
+        packets = sniff(filter=f"tcp and host {CLI_IP}", timeout=RETRANSMISSION_TIMEOUT)
+        if packets:
+            for pkt in packets:
+                print(pkt.summary())  # Verbose output for captured packets
+                if process_ack(pkt):
+                    ack_received = True
+
+        if not ack_received:
+            print("No ACK received, waiting for new SYN")
+            return
+
+        print("Handshake completed")
+
 
         # Send HTTP response
         flags = 0x18  # PSH-ACK
-        response_packet = create_packet(dest_ip, ip.src, dest_port, tcp.sport, ack_seq, seq + 1, flags, socket.htons(5840), file_contents.encode())
-        sock.sendto(response_packet, (src_ip, 0))
+        response_packet = create_packet(SERV_IP, ip.src, SERV_PORT, tcp.sport, ack_seq, seq + 1, flags, socket.htons(5840), file_contents.encode())
+        sock.sendto(response_packet, (CLI_IP, 0))
         # send(response_packet, verbose=0)
-        print(f"Sent back HTTP response to packet {i}...")
+        print(f"Sent back HTTP response to packet...")
 
 
-# ------------------------------sniff tcp stream------------------------------
-# Start sniffing
+        # TODO: FIN-ACK closer
+
+# ------------------------------sniff tcp stream for SYNs------------------------------
 print("Starting to sniff...")
-sniff(filter=f"tcp and dst port {dest_port}", prn=packet_callback, store=0)
+sniff(filter=f"tcp and dst port {SERV_PORT}", prn=packet_callback, store=0)

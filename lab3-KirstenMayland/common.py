@@ -1,11 +1,16 @@
-# Kirsten Mayland
-# Lab 3 Computer Networks
-# Spring 2024
-# Credit: Framework provided by ChatGPT
-
+from scapy.all import *
 import socket
 import struct
-import time
+
+# Configuration
+CLI_IP = get_if_addr(conf.iface)
+#SERV_IP = '129.170.212.8'  # thepond
+SERV_IP = '71.19.146.5' #packetbender.com
+CLI_PORT = 12345
+SERV_PORT = 8080
+
+RETRANSMISSION_TIMEOUT = 5
+MAX_RETRANSMISSION_ATTEMPTS = 5
 
 # ------------------------------checksum------------------------------
 def checksum(data):

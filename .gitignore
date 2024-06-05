@@ -9,3 +9,4 @@ udpserv2
 *.gif
 *.o
 __pycache__
+received_data.txt
