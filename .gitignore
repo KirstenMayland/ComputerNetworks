@@ -10,3 +10,5 @@ udpserv2
 *.o
 __pycache__
 received_data.txt
+server.crt
+server.key
